@@ -33,7 +33,7 @@ class GladiatusGUI:
         ("Barbarian Village", "5"),
         ("Bandit Camp", "6"),
     ]
-    DUNGEON_LOCATIONS = ["1", "2", "3", "4"]
+    DUNGEON_LOCATIONS = [label for label, _ in EXPEDITION_LOCATIONS]
 
     def __init__(self, root):
         self.root = root
@@ -60,7 +60,7 @@ class GladiatusGUI:
         self.hp_min_var = tk.StringVar(value="25")
         self.expedition_location_var = tk.StringVar(value="Grimwood")
         self.expedition_target_var = tk.StringVar(value="1")
-        self.dungeon_location_var = tk.StringVar(value="1")
+        self.dungeon_location_var = tk.StringVar(value="Grimwood")
 
         self._settings_suspended = True
         self._configure_styles()
@@ -344,7 +344,7 @@ class GladiatusGUI:
         ttk.Label(panel, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
             panel,
-            text="Dungeon icin submenu'den lokasyon secilir, moblar random dalinir.",
+            text="Dungeon icin expedition ile ayni country map lokasyonlari kullanilir, moblar random dalinir.",
             style="Muted.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(4, 12))
 
@@ -495,7 +495,7 @@ class GladiatusGUI:
             expedition_target = data.get("expedition_target", "1")
             self.expedition_target_var.set(str(self._coerce_expedition_target(expedition_target)))
 
-            dungeon_location = data.get("dungeon_location", "1")
+            dungeon_location = data.get("dungeon_location", "Grimwood")
             self.dungeon_location_var.set(self._coerce_dungeon_location(dungeon_location))
         except Exception as exc:
             logger.warning("Could not load GUI settings: %s", exc)

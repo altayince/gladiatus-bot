@@ -25,7 +25,7 @@ class GladiatusBot:
         "barbarian village": 5,
         "bandit camp": 6,
     }
-    DUNGEON_LOCATIONS = {"1": "1", "2": "2", "3": "3", "4": "4"}
+    DUNGEON_LOCATIONS = EXPEDITION_LOCATIONS
 
     def __init__(self, headless=True, timeout=15):
         options = Options()
@@ -1184,18 +1184,30 @@ class GladiatusBot:
             return False
 
     def _normalize_dungeon_location(self, dungeon_location):
-        value = str(dungeon_location).strip()
-        if value in self.DUNGEON_LOCATIONS:
-            return value
-        return "1"
+        if isinstance(dungeon_location, int):
+            for label, loc in self.DUNGEON_LOCATIONS.items():
+                if loc == dungeon_location:
+                    return label, loc
+
+        if isinstance(dungeon_location, str):
+            normalized = dungeon_location.strip().lower()
+            if normalized.isdigit():
+                for label, loc in self.DUNGEON_LOCATIONS.items():
+                    if str(loc) == normalized:
+                        return label, loc
+            for label, loc in self.DUNGEON_LOCATIONS.items():
+                if normalized == label:
+                    return label, loc
+
+        return "grimwood", self.DUNGEON_LOCATIONS["grimwood"]
 
     def open_dungeon_location(self, dungeon_location, logger_callback=None):
         """Open the selected dungeon location from the country map submenu."""
         try:
-            loc = self._normalize_dungeon_location(dungeon_location)
+            label, loc = self._normalize_dungeon_location(dungeon_location)
             return self._open_country_map_location(
                 loc=loc,
-                label=loc,
+                label=label,
                 page_name="dungeon",
                 expected_url_keywords=[f"loc={loc}", "mod=location"],
                 expected_elements=[
