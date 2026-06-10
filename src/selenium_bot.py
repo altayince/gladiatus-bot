@@ -25,6 +25,7 @@ class GladiatusBot:
         "barbarian village": 5,
         "bandit camp": 6,
     }
+    DUNGEON_LOCATIONS = {"1": "1", "2": "2", "3": "3", "4": "4"}
 
     def __init__(self, headless=True, timeout=15):
         options = Options()
@@ -589,7 +590,7 @@ class GladiatusBot:
         except Exception:
             return False
 
-    def open_dungeon_and_random_attack(self, logger_callback=None, max_retries=3):
+    def _legacy_open_dungeon_and_random_attack(self, logger_callback=None, max_retries=3):
         """Open the dungeon page (via cooldown bar link) and click a random minimap attack.
         Returns True if an attack element was clicked."""
         try:
@@ -730,7 +731,7 @@ class GladiatusBot:
                 logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
             return False
 
-    def attempt_dungeon_if_ready(self, logger_callback=None):
+    def attempt_dungeon_if_ready(self, dungeon_location="1", logger_callback=None):
         """If dungeon cooldown indicates ready, navigate and click a random attack.
         Returns dict with result."""
         info = {"clicked": False, "message": ""}
@@ -751,7 +752,10 @@ class GladiatusBot:
             if logger_callback:
                 logger_callback("Dungeon ready — opening and clicking a random minimap attack...")
 
-            clicked = self.open_dungeon_and_random_attack(logger_callback=logger_callback)
+            clicked = self.open_dungeon_and_random_attack(
+                dungeon_location=dungeon_location,
+                logger_callback=logger_callback,
+            )
             info["clicked"] = bool(clicked)
             info["message"] = "Clicked" if clicked else "No clickable attack found"
             if logger_callback:
@@ -1111,19 +1115,17 @@ class GladiatusBot:
                 logger_callback(f"Error opening country map submenu: {e}")
             return False
 
-    def open_expedition_location(self, expedition_location, logger_callback=None):
-        """Open the selected expedition location from the country map submenu."""
+    def _open_country_map_location(self, loc, label, page_name, expected_url_keywords, expected_elements, logger_callback=None):
         try:
-            label, loc = self._normalize_expedition_location(expedition_location)
             if not self.ensure_game_tab():
                 if logger_callback:
-                    logger_callback("Could not find game tab for expedition location")
+                    logger_callback(f"Could not find game tab for {page_name}")
                 return False
 
             self.close_overlays()
 
             if logger_callback:
-                logger_callback(f"Opening expedition location: {label}")
+                logger_callback(f"Opening {page_name} location: {label}")
 
             if not self.open_country_map(logger_callback=logger_callback):
                 return False
@@ -1143,11 +1145,8 @@ class GladiatusBot:
                             previous_url = self.driver.current_url
                             if self._safe_click(el):
                                 if self._wait_for_page_context(
-                                    expected_elements=[
-                                        (By.CSS_SELECTOR, "button.expedition_button"),
-                                        (By.CSS_SELECTOR, "#expedition_list .expedition_box"),
-                                    ],
-                                    url_keywords=[f"loc={loc}", "mod=location"],
+                                    expected_elements=expected_elements,
+                                    url_keywords=expected_url_keywords,
                                     timeout=12,
                                 ):
                                     return True
@@ -1157,11 +1156,57 @@ class GladiatusBot:
                     continue
 
             if logger_callback:
-                logger_callback(f"Expedition location '{label}' not found")
+                logger_callback(f"{page_name} location '{label}' not found")
             return False
         except Exception as e:
             if logger_callback:
+                logger_callback(f"Error opening {page_name} location: {e}")
+            return False
+
+    def open_expedition_location(self, expedition_location, logger_callback=None):
+        """Open the selected expedition location from the country map submenu."""
+        try:
+            label, loc = self._normalize_expedition_location(expedition_location)
+            return self._open_country_map_location(
+                loc=loc,
+                label=label,
+                page_name="expedition",
+                expected_url_keywords=[f"loc={loc}", "mod=location"],
+                expected_elements=[
+                    (By.CSS_SELECTOR, "button.expedition_button"),
+                    (By.CSS_SELECTOR, "#expedition_list .expedition_box"),
+                ],
+                logger_callback=logger_callback,
+            )
+        except Exception as e:
+            if logger_callback:
                 logger_callback(f"Error opening expedition location: {e}")
+            return False
+
+    def _normalize_dungeon_location(self, dungeon_location):
+        value = str(dungeon_location).strip()
+        if value in self.DUNGEON_LOCATIONS:
+            return value
+        return "1"
+
+    def open_dungeon_location(self, dungeon_location, logger_callback=None):
+        """Open the selected dungeon location from the country map submenu."""
+        try:
+            loc = self._normalize_dungeon_location(dungeon_location)
+            return self._open_country_map_location(
+                loc=loc,
+                label=loc,
+                page_name="dungeon",
+                expected_url_keywords=[f"loc={loc}", "mod=location"],
+                expected_elements=[
+                    (By.XPATH, "//*[contains(@onclick, 'startFight(')]"),
+                    (By.CSS_SELECTOR, "img[src*='combatloc.gif'], a[href*='startFight'], button[onclick*='startFight']"),
+                ],
+                logger_callback=logger_callback,
+            )
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening dungeon location: {e}")
             return False
 
     def click_expedition_target(self, expedition_target=1, logger_callback=None):
@@ -1227,6 +1272,148 @@ class GladiatusBot:
 
             return False
         except Exception:
+            return False
+
+    def open_dungeon_and_random_attack(self, dungeon_location="1", logger_callback=None, max_retries=3):
+        """Open the dungeon location and click a random minimap attack.
+        Returns True if an attack element was clicked."""
+        try:
+            if logger_callback:
+                logger_callback("Ensuring game tab is active for dungeon...")
+
+            if not self.ensure_game_tab():
+                if logger_callback:
+                    logger_callback("Could not find game tab for dungeon")
+                return False
+
+            if dungeon_location is not None:
+                if not self.open_dungeon_location(dungeon_location, logger_callback=logger_callback):
+                    return False
+            else:
+                try:
+                    link = None
+                    candidates = [
+                        (By.CSS_SELECTOR, "#cooldown_bar_dungeon a.cooldown_bar_link"),
+                        (By.CSS_SELECTOR, "a.cooldown_bar_link[href*='mod=dungeon']"),
+                        (By.CSS_SELECTOR, "a.cooldown_bar_link[href*='loc=1']"),
+                    ]
+                    for by, sel in candidates:
+                        try:
+                            els = self.driver.find_elements(by, sel)
+                            for e in els:
+                                if e.is_displayed() and e.is_enabled():
+                                    link = e
+                                    break
+                            if link:
+                                break
+                        except Exception:
+                            continue
+
+                    if not link:
+                        if logger_callback:
+                            logger_callback("Dungeon link not found")
+                        return False
+
+                    if not self._safe_click(link):
+                        if logger_callback:
+                            logger_callback("Failed to click dungeon link")
+                        return False
+
+                    if not self._wait_for_page_context(
+                        expected_elements=[
+                            (By.XPATH, "//*[contains(@onclick, 'startFight(')]"),
+                            (By.CSS_SELECTOR, "img[src*='combatloc.gif'], a[href*='startFight'], button[onclick*='startFight']"),
+                            (By.XPATH, "//input[@type='submit' and @value='Normal']"),
+                        ],
+                        url_keywords=["mod=dungeon"],
+                        timeout=15,
+                    ):
+                        if logger_callback:
+                            logger_callback("Dungeon page did not open in time")
+                        return False
+                except Exception:
+                    if logger_callback:
+                        logger_callback("Error navigating to dungeon page")
+                    return False
+
+            visible = self._wait_for_dungeon_attack_elements(timeout=10)
+            if not visible:
+                try:
+                    enter_btn = None
+                    enter_candidates = [
+                        (By.XPATH, "//input[@type='submit' and @value='Normal']"),
+                        (By.CSS_SELECTOR, "input[name='dif1']"),
+                        (By.CSS_SELECTOR, "input.button1[value='Normal']")
+                    ]
+                    for by, sel in enter_candidates:
+                        try:
+                            els = self.driver.find_elements(by, sel)
+                            for e in els:
+                                if e.is_displayed() and e.is_enabled():
+                                    enter_btn = e
+                                    break
+                            if enter_btn:
+                                break
+                        except Exception:
+                            continue
+
+                    if enter_btn:
+                        if logger_callback:
+                            logger_callback("Dungeon appears finished. Re-entering on Normal difficulty...")
+                        if not self._safe_click(enter_btn):
+                            if logger_callback:
+                                logger_callback("Failed to re-enter dungeon on Normal difficulty")
+                        else:
+                            self._wait_for_page_context(
+                                expected_elements=[
+                                    (By.XPATH, "//*[contains(@onclick, 'startFight(')]"),
+                                    (By.CSS_SELECTOR, "img[src*='combatloc.gif'], a[href*='startFight'], button[onclick*='startFight']"),
+                                ],
+                                url_keywords=["mod=dungeon"],
+                                timeout=12,
+                            )
+                            visible = self._wait_for_dungeon_attack_elements(timeout=15)
+                except Exception:
+                    pass
+
+            if not visible:
+                if logger_callback:
+                    logger_callback("No dungeon attack elements became available")
+                return False
+
+            tries = 0
+            while tries < max_retries and visible:
+                try:
+                    el = random.choice(visible)
+                    previous_url = self.driver.current_url
+                    try:
+                        if not self._safe_click(el):
+                            raise RuntimeError("click failed")
+                        if logger_callback:
+                            logger_callback("Clicked dungeon minimap attack element")
+                        self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=15)
+                        self.navigate_to_overview(logger_callback=logger_callback)
+                        return True
+                    except StaleElementReferenceException:
+                        tries += 1
+                        visible = [c for c in self._wait_for_dungeon_attack_elements(timeout=5) if c.is_displayed()]
+                        continue
+                    except Exception:
+                        tries += 1
+                        visible = [c for c in self._wait_for_dungeon_attack_elements(timeout=5) if c.is_displayed()]
+                        continue
+                except Exception:
+                    tries += 1
+                    time.sleep(0.3)
+                    visible = [c for c in self._wait_for_dungeon_attack_elements(timeout=5) if c.is_displayed()]
+                    continue
+
+            if logger_callback:
+                logger_callback("No clickable dungeon attack element found after retries")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
             return False
 
     def is_hp_above_threshold(self, min_hp_percent):
