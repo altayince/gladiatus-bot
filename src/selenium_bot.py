@@ -1219,6 +1219,18 @@ class GladiatusBot:
             time.sleep(0.3)
         return []
 
+    def get_healing_item_count(self, timeout=5, logger_callback=None):
+        """Return the number of healing items visible in the first inventory bag."""
+        try:
+            if not self.open_first_inventory_bag(logger_callback=logger_callback):
+                return None
+            items = self.find_healing_items(timeout=timeout)
+            return len(items)
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error reading healing item count: {e}")
+            return None
+
     def drag_item_to_avatar(self, item_element, logger_callback=None):
         """Drag a healing item to the avatar drop zone."""
         try:

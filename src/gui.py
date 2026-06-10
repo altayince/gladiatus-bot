@@ -40,6 +40,7 @@ class GladiatusGUI:
 
         self.status_var = tk.StringVar(value="Ready")
         self.hp_var = tk.StringVar(value="HP: --")
+        self.hp_refill_count_var = tk.StringVar(value="Refill pots: --")
 
         self.expedition_var = tk.BooleanVar(value=True)
         self.dungeon_var = tk.BooleanVar(value=True)
@@ -339,11 +340,20 @@ class GladiatusGUI:
         self.hp_value = tk.Label(panel, textvariable=self.hp_var, bg=self.PANEL, fg=self.SUCCESS, font=("Segoe UI Semibold", 18))
         self.hp_value.grid(row=1, column=0, columnspan=2, sticky="w", pady=(12, 8))
 
+        self.hp_refill_value = tk.Label(
+            panel,
+            textvariable=self.hp_refill_count_var,
+            bg=self.PANEL,
+            fg=self.ACCENT,
+            font=("Segoe UI Semibold", 11),
+        )
+        self.hp_refill_value.grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 8))
+
         self.mode_value = tk.Label(panel, text="Idle", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 11))
-        self.mode_value.grid(row=2, column=0, sticky="w")
+        self.mode_value.grid(row=3, column=0, sticky="w")
 
         self.loop_value = tk.Label(panel, text="Dongu bekliyor", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 11))
-        self.loop_value.grid(row=2, column=1, sticky="e")
+        self.loop_value.grid(row=3, column=1, sticky="e")
 
     def _build_notes_panel(self, parent):
         panel = ttk.Frame(parent, style="PanelAlt.TFrame", padding=16)
@@ -600,6 +610,19 @@ class GladiatusGUI:
             else:
                 text = "HP: --"
             self._ui(lambda: self.hp_var.set(text))
+            self.refresh_hp_refill_count()
+        except Exception:
+            pass
+
+    def refresh_hp_refill_count(self):
+        try:
+            if not self.bot:
+                self._ui(lambda: self.hp_refill_count_var.set("Refill pots: --"))
+                return
+
+            count = self.bot.get_healing_item_count(logger_callback=None)
+            text = f"Refill pots: {count}" if count is not None else "Refill pots: --"
+            self._ui(lambda: self.hp_refill_count_var.set(text))
         except Exception:
             pass
 
@@ -701,6 +724,7 @@ class GladiatusGUI:
                     self.append_log("Circus Turma mechanic disabled")
 
                 self.refresh_hp_label()
+                self.refresh_hp_refill_count()
             except Exception as exc:
                 self.append_log(f"Error in play loop: {exc}")
 
