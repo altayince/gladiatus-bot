@@ -1,10 +1,12 @@
+import json
 import logging
 import threading
 import time
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox, ttk
 
-from .config import BASE_URL, PASSWORD, USERNAME
+from .config import BASE_URL, GUI_SETTINGS_PATH, PASSWORD, USERNAME
 from .selenium_bot import GladiatusBot
 
 logging.basicConfig(level=logging.INFO)
@@ -45,8 +47,13 @@ class GladiatusGUI:
         self.refill_hp_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
 
+        self._settings_suspended = True
         self._configure_styles()
         self._build_layout()
+        self._load_settings()
+        self._bind_settings_watchers()
+        self._settings_suspended = False
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _configure_styles(self):
         style = ttk.Style()
@@ -290,6 +297,79 @@ class GladiatusGUI:
             wraplength=280,
             font=("Segoe UI", 10),
         ).pack(anchor="w", pady=(8, 0))
+
+    def _bind_settings_watchers(self):
+        for variable in (self.expedition_var, self.dungeon_var, self.circus_var, self.refill_hp_var, self.hp_min_var):
+            variable.trace_add("write", self._on_settings_changed)
+
+    def _on_settings_changed(self, *args):
+        if self._settings_suspended:
+            return
+        self._save_settings()
+
+    def _collect_settings(self):
+        return {
+            "expedition": bool(self.expedition_var.get()),
+            "dungeon": bool(self.dungeon_var.get()),
+            "circus": bool(self.circus_var.get()),
+            "refill_hp": bool(self.refill_hp_var.get()),
+            "hp_min": self.hp_min_var.get().strip() or "25",
+        }
+
+    def _coerce_bool(self, value, default):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on"}:
+                return True
+            if normalized in {"0", "false", "no", "off"}:
+                return False
+        return default
+
+    def _load_settings(self):
+        try:
+            path = Path(GUI_SETTINGS_PATH)
+            if not path.exists():
+                return
+
+            with path.open("r", encoding="utf-8") as handle:
+                data = json.load(handle)
+
+            if not isinstance(data, dict):
+                return
+
+            self.expedition_var.set(self._coerce_bool(data.get("expedition"), True))
+            self.dungeon_var.set(self._coerce_bool(data.get("dungeon"), True))
+            self.circus_var.set(self._coerce_bool(data.get("circus"), True))
+            self.refill_hp_var.set(self._coerce_bool(data.get("refill_hp"), False))
+
+            hp_min = data.get("hp_min", "25")
+            self.hp_min_var.set(str(hp_min))
+        except Exception as exc:
+            logger.warning("Could not load GUI settings: %s", exc)
+
+    def _save_settings(self):
+        try:
+            path = Path(GUI_SETTINGS_PATH)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("w", encoding="utf-8") as handle:
+                json.dump(self._collect_settings(), handle, indent=2)
+        except Exception as exc:
+            logger.warning("Could not save GUI settings: %s", exc)
+
+    def _on_close(self):
+        self._save_settings()
+        try:
+            self.stop_play()
+        except Exception:
+            pass
+        try:
+            if self.bot:
+                self.bot.quit()
+        except Exception:
+            pass
+        self.root.destroy()
 
     def _ui(self, callback):
         self.root.after(0, callback)

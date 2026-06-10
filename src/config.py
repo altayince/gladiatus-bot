@@ -10,3 +10,4 @@ USERNAME = os.getenv("GLADIATUS_USERNAME")
 PASSWORD = os.getenv("GLADIATUS_PASSWORD")
 BASE_URL = os.getenv("BASE_URL")
 HEADLESS = os.getenv("HEADLESS", "true").lower() in ("1", "true", "yes")
+GUI_SETTINGS_PATH = Path.home() / ".gladiatus-bot" / "gui_settings.json"
