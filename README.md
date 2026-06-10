@@ -20,7 +20,7 @@ Every change follows the same issue-first flow:
 5. Open a PR into `main`.
 6. Review the PR yourself and merge once checks pass.
 
-Direct pushes to `main` are blocked by GitHub branch protection and local hooks.
+Direct pushes to `main` are blocked by GitHub branch protection and local hooks. When a PR is merged, the linked GLA issue closes automatically; closing or deleting the PR leaves the issue open.
 
 See [WORKFLOW.md](WORKFLOW.md) for the full process.
 

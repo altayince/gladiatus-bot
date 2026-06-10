@@ -13,6 +13,8 @@ This repository uses an issue-first, branch-per-task, PR-only flow.
 - Assign the PR to `@me` and add it to the `GLA` project.
 - Review the PR yourself, then merge once checks pass.
 - Required review approval is disabled because this is a single-person project.
+- If the PR is merged, the linked GLA issue closes automatically.
+- If the PR is closed without merge or deleted, the linked issue stays open.
 - Do not push directly to `main`.
 
 ## Enforced Controls
