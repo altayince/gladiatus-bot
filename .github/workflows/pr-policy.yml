@@ -1,0 +1,77 @@
+name: PR Policy
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  validate-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch naming and issue existence
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const match = branch.match(/^(feature|bugfix)\/GLA-(\d+)-[a-z0-9]+(?:-[a-z0-9]+)*$/);
+
+            if (!match) {
+              core.setFailed(`Branch "${branch}" must follow feature/GLA-[ticket]-description or bugfix/GLA-[ticket]-description.`);
+              return;
+            }
+
+            const issueNumber = Number(match[2]);
+
+            try {
+              await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+              });
+            } catch (error) {
+              core.setFailed(`Branch "${branch}" references issue #${issueNumber}, but that issue does not exist.`);
+            }
+
+  validate-ownership:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate assignee and project
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GLA_PROJECT_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const result = await github.graphql(`
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  pullRequest(number:$number) {
+                    assignees(first: 20) { nodes { login } }
+                    projectItems(first: 20) { nodes { project { title } } }
+                  }
+                }
+              }
+            `, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: prNumber,
+            });
+
+            const pr = result.repository.pullRequest;
+            const assignees = pr.assignees.nodes.map(node => node.login);
+            const projects = pr.projectItems.nodes.map(node => node.project.title);
+
+            if (!assignees.includes('altayince')) {
+              core.setFailed('PR must be assigned to altayince.');
+              return;
+            }
+
+            if (!projects.includes('GLA')) {
+              core.setFailed('PR must be added to the GLA project.');
+              return;
+            }
