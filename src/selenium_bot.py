@@ -1229,6 +1229,41 @@ class GladiatusBot:
                 logger_callback(f"Error opening dungeon location: {e}")
             return False
 
+    def open_dungeon_tab(self, logger_callback=None):
+        """Click the top Dungeon tab after a location is selected."""
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "ul#mainnav a.awesome-tabs[href*='mod=dungeon']"),
+                (By.CSS_SELECTOR, "a.awesome-tabs[href*='mod=dungeon']"),
+                (By.XPATH, "//ul[@id='mainnav']//a[contains(@class,'awesome-tabs') and contains(@href,'mod=dungeon')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "input.button1[name='dif1'], input.button1[name='dif2']"),
+                                        (By.CSS_SELECTOR, "form[action*='mod=dungeon']"),
+                                    ],
+                                    url_keywords=["mod=dungeon"],
+                                    timeout=12,
+                                ):
+                                    if logger_callback:
+                                        logger_callback("Opened Dungeon tab")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("Dungeon tab not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening Dungeon tab: {e}")
+            return False
+
     def _click_dungeon_difficulty(self, dungeon_difficulty="Normal", logger_callback=None):
         """Click Normal or Advanced if the Enter Dungeon card is present."""
         try:
@@ -1335,6 +1370,8 @@ class GladiatusBot:
 
             if dungeon_location is not None:
                 if not self.open_dungeon_location(dungeon_location, logger_callback=logger_callback):
+                    return False
+                if not self.open_dungeon_tab(logger_callback=logger_callback):
                     return False
             else:
                 try:
