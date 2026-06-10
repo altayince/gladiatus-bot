@@ -34,6 +34,7 @@ class GladiatusGUI:
         ("Bandit Camp", "6"),
     ]
     DUNGEON_LOCATIONS = [label for label, _ in EXPEDITION_LOCATIONS]
+    DUNGEON_DIFFICULTIES = ["Normal", "Advanced"]
 
     def __init__(self, root):
         self.root = root
@@ -61,6 +62,7 @@ class GladiatusGUI:
         self.expedition_location_var = tk.StringVar(value="Grimwood")
         self.expedition_target_var = tk.StringVar(value="1")
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
+        self.dungeon_difficulty_var = tk.StringVar(value="Normal")
 
         self._settings_suspended = True
         self._configure_styles()
@@ -361,6 +363,27 @@ class GladiatusGUI:
         )
         self.dungeon_combo.grid(row=0, column=1, sticky="w")
 
+        difficulty_row = ttk.Frame(panel, style="Panel.TFrame")
+        difficulty_row.grid(row=3, column=0, sticky="ew", pady=(14, 0))
+        difficulty_row.columnconfigure(1, weight=1)
+        tk.Label(difficulty_row, text="Difficulty", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+
+        difficulty_box = ttk.Frame(difficulty_row, style="Panel.TFrame")
+        difficulty_box.grid(row=0, column=1, sticky="w")
+        for idx, label in enumerate(self.DUNGEON_DIFFICULTIES):
+            tk.Radiobutton(
+                difficulty_box,
+                text=label,
+                value=label,
+                variable=self.dungeon_difficulty_var,
+                bg=self.PANEL,
+                fg=self.TEXT,
+                activebackground=self.PANEL,
+                activeforeground=self.TEXT,
+                selectcolor="#0b1220",
+                font=("Segoe UI", 10),
+            ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
+
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
         panel.grid(row=3, column=0, sticky="nsew")
@@ -438,6 +461,7 @@ class GladiatusGUI:
             self.expedition_location_var,
             self.expedition_target_var,
             self.dungeon_location_var,
+            self.dungeon_difficulty_var,
         ):
             variable.trace_add("write", self._on_settings_changed)
 
@@ -456,6 +480,7 @@ class GladiatusGUI:
             "expedition_location": self.get_expedition_location(),
             "expedition_target": self.get_expedition_target(),
             "dungeon_location": self.get_dungeon_location(),
+            "dungeon_difficulty": self.get_dungeon_difficulty(),
         }
 
     def _coerce_bool(self, value, default):
@@ -497,6 +522,9 @@ class GladiatusGUI:
 
             dungeon_location = data.get("dungeon_location", "Grimwood")
             self.dungeon_location_var.set(self._coerce_dungeon_location(dungeon_location))
+
+            dungeon_difficulty = data.get("dungeon_difficulty", "Normal")
+            self.dungeon_difficulty_var.set(self._coerce_dungeon_difficulty(dungeon_difficulty))
         except Exception as exc:
             logger.warning("Could not load GUI settings: %s", exc)
 
@@ -729,6 +757,17 @@ class GladiatusGUI:
     def get_dungeon_location(self):
         return self._coerce_dungeon_location(self.dungeon_location_var.get())
 
+    def _coerce_dungeon_difficulty(self, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            for label in self.DUNGEON_DIFFICULTIES:
+                if normalized == label.lower():
+                    return label
+        return self.DUNGEON_DIFFICULTIES[0]
+
+    def get_dungeon_difficulty(self):
+        return self._coerce_dungeon_difficulty(self.dungeon_difficulty_var.get())
+
     def append_log(self, msg):
         try:
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -798,6 +837,7 @@ class GladiatusGUI:
                     try:
                         self.bot.attempt_dungeon_if_ready(
                             dungeon_location=self.get_dungeon_location(),
+                            dungeon_difficulty=self.get_dungeon_difficulty(),
                             logger_callback=self.append_log,
                         )
                     except Exception as exc:
