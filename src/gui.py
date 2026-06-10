@@ -46,6 +46,7 @@ class GladiatusGUI:
         self.circus_var = tk.BooleanVar(value=True)
         self.refill_hp_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
+        self.expedition_target_var = tk.StringVar(value="1")
 
         self._settings_suspended = True
         self._configure_styles()
@@ -133,16 +134,29 @@ class GladiatusGUI:
         left = ttk.Frame(shell, style="App.TFrame")
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
         left.columnconfigure(0, weight=1)
-        left.rowconfigure(3, weight=1)
+        left.rowconfigure(0, weight=1)
+
+        notebook = ttk.Notebook(left)
+        notebook.grid(row=0, column=0, sticky="nsew")
+
+        main_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
+        expedition_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
+        notebook.add(main_tab, text="Main")
+        notebook.add(expedition_tab, text="Expedition")
+        main_tab.columnconfigure(0, weight=1)
+        main_tab.rowconfigure(3, weight=1)
+        expedition_tab.columnconfigure(0, weight=1)
+        expedition_tab.rowconfigure(1, weight=1)
 
         right = ttk.Frame(shell, style="App.TFrame")
         right.grid(row=1, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
 
-        self._build_credentials_panel(left)
-        self._build_controls_panel(left)
-        self._build_mechanics_panel(left)
-        self._build_log_panel(left)
+        self._build_credentials_panel(main_tab)
+        self._build_controls_panel(main_tab)
+        self._build_mechanics_panel(main_tab)
+        self._build_log_panel(main_tab)
+        self._build_expedition_panel(expedition_tab)
 
         self._build_status_panel(right)
         self._build_notes_panel(right)
@@ -240,6 +254,56 @@ class GladiatusGUI:
         )
         self.hp_spinbox.pack(side="left", padx=(10, 0), ipady=4)
 
+    def _build_expedition_panel(self, parent):
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        panel.columnconfigure(0, weight=1)
+
+        ttk.Label(panel, text="Expedition Target", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            panel,
+            text="Expedition alaninda 4 mob arasindan hangisinin hedeflenecegini sec.",
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+
+        choice_box = ttk.Frame(panel, style="Panel.TFrame")
+        choice_box.grid(row=2, column=0, sticky="ew")
+        choice_box.columnconfigure(0, weight=1)
+
+        options = [
+            ("1", "1. mob", "Ilk kutudaki hedef"),
+            ("2", "2. mob", "Ikinci kutudaki hedef"),
+            ("3", "3. mob", "Ucuncu kutudaki hedef"),
+            ("4", "4. mob", "Dorduncu kutudaki hedef"),
+        ]
+
+        for idx, (value, label, description) in enumerate(options):
+            row = idx // 2
+            col = idx % 2
+            option_frame = ttk.Frame(choice_box, style="Panel.TFrame")
+            option_frame.grid(row=row, column=col, sticky="ew", padx=(0, 10 if col == 0 else 0), pady=(0, 10))
+            option_frame.columnconfigure(1, weight=1)
+
+            tk.Radiobutton(
+                option_frame,
+                text=label,
+                value=value,
+                variable=self.expedition_target_var,
+                bg=self.PANEL,
+                fg=self.TEXT,
+                activebackground=self.PANEL,
+                activeforeground=self.TEXT,
+                selectcolor="#0b1220",
+                font=("Segoe UI", 10),
+            ).grid(row=0, column=0, sticky="w")
+            tk.Label(
+                option_frame,
+                text=description,
+                bg=self.PANEL,
+                fg=self.MUTED,
+                font=("Segoe UI", 9),
+            ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
+
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
         panel.grid(row=3, column=0, sticky="nsew")
@@ -299,7 +363,14 @@ class GladiatusGUI:
         ).pack(anchor="w", pady=(8, 0))
 
     def _bind_settings_watchers(self):
-        for variable in (self.expedition_var, self.dungeon_var, self.circus_var, self.refill_hp_var, self.hp_min_var):
+        for variable in (
+            self.expedition_var,
+            self.dungeon_var,
+            self.circus_var,
+            self.refill_hp_var,
+            self.hp_min_var,
+            self.expedition_target_var,
+        ):
             variable.trace_add("write", self._on_settings_changed)
 
     def _on_settings_changed(self, *args):
@@ -314,6 +385,7 @@ class GladiatusGUI:
             "circus": bool(self.circus_var.get()),
             "refill_hp": bool(self.refill_hp_var.get()),
             "hp_min": self.hp_min_var.get().strip() or "25",
+            "expedition_target": self.get_expedition_target(),
         }
 
     def _coerce_bool(self, value, default):
@@ -346,6 +418,9 @@ class GladiatusGUI:
 
             hp_min = data.get("hp_min", "25")
             self.hp_min_var.set(str(hp_min))
+
+            expedition_target = data.get("expedition_target", "1")
+            self.expedition_target_var.set(str(self._coerce_expedition_target(expedition_target)))
         except Exception as exc:
             logger.warning("Could not load GUI settings: %s", exc)
 
@@ -535,6 +610,16 @@ class GladiatusGUI:
         except (ValueError, tk.TclError):
             return 25
 
+    def _coerce_expedition_target(self, value):
+        try:
+            target = int(value)
+        except (TypeError, ValueError):
+            target = 1
+        return max(1, min(4, target))
+
+    def get_expedition_target(self):
+        return self._coerce_expedition_target(self.expedition_target_var.get())
+
     def append_log(self, msg):
         try:
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -590,7 +675,10 @@ class GladiatusGUI:
 
                 if self.expedition_var.get():
                     if hp_ready:
-                        self.bot.attempt_expedition_if_ready(logger_callback=self.append_log)
+                        self.bot.attempt_expedition_if_ready(
+                            expedition_target=self.get_expedition_target(),
+                            logger_callback=self.append_log,
+                        )
                     else:
                         self.append_log(f"HP at or below {min_hp}%, skipping expedition")
                 else:

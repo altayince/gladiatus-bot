@@ -969,7 +969,7 @@ class GladiatusBot:
                 logger_callback(info["message"])
             return info
 
-    def attempt_expedition_if_ready(self, logger_callback=None):
+    def attempt_expedition_if_ready(self, expedition_target=1, logger_callback=None):
         """Check cooldown bar; if ready and attempts > 0 perform one expedition click.
         Returns a dict describing the single click attempt."""
         info = {"clicked": False, "attempts_before": None, "attempts_after": None, "message": ""}
@@ -1018,7 +1018,7 @@ class GladiatusBot:
             if logger_callback:
                 logger_callback(f"Expedition ready and attempts available: {cur} / {mx} — clicking...")
             previous_url = self.driver.current_url
-            clicked = self.click_leftmost_expedition()
+            clicked = self.click_expedition_target(expedition_target=expedition_target, logger_callback=logger_callback)
             info["clicked"] = clicked
             if clicked:
                 if logger_callback:
@@ -1040,17 +1040,44 @@ class GladiatusBot:
 
     def click_leftmost_expedition(self):
         """Click the first enabled expedition button. Returns True if clicked."""
-        try:
-            # Try direct expedition buttons first (on expedition page)
-            buttons = self.driver.find_elements(By.CSS_SELECTOR, "button.expedition_button")
-            for b in buttons:
-                try:
-                    if b.is_displayed() and b.is_enabled():
-                        return self._safe_click(b)
-                except Exception:
-                    continue
+        return self.click_expedition_target(expedition_target=1)
 
-            # Fallback: on overview there's a "Go to expedition" cooldown link
+    def click_expedition_target(self, expedition_target=1, logger_callback=None):
+        """Click the selected expedition target by 1-based expedition box index."""
+        try:
+            try:
+                target_index = int(expedition_target)
+            except (TypeError, ValueError):
+                target_index = 1
+            target_index = max(1, min(4, target_index))
+
+            boxes = self.driver.find_elements(By.CSS_SELECTOR, "#expedition_list .expedition_box")
+            if boxes and len(boxes) >= target_index:
+                try:
+                    box = boxes[target_index - 1]
+                    if box.is_displayed():
+                        buttons = box.find_elements(By.CSS_SELECTOR, "button.expedition_button")
+                        for button in buttons:
+                            try:
+                                if button.is_displayed() and button.is_enabled():
+                                    return self._safe_click(button)
+                            except Exception:
+                                continue
+                        if logger_callback:
+                            logger_callback(f"Expedition target {target_index} is visible but not clickable")
+                        return False
+                except Exception:
+                    pass
+
+            buttons = self.driver.find_elements(By.CSS_SELECTOR, "button.expedition_button")
+            if buttons and len(buttons) >= target_index:
+                try:
+                    button = buttons[target_index - 1]
+                    if button.is_displayed() and button.is_enabled():
+                        return self._safe_click(button)
+                except Exception:
+                    pass
+
             try:
                 links = self.driver.find_elements(
                     By.CSS_SELECTOR,
@@ -1070,15 +1097,7 @@ class GladiatusBot:
                                 timeout=10,
                             ):
                                 return False
-                            # Now try finding expedition buttons again on the expedition page
-                            buttons = self.driver.find_elements(By.CSS_SELECTOR, "button.expedition_button")
-                            for b in buttons:
-                                try:
-                                    if b.is_displayed() and b.is_enabled():
-                                        return self._safe_click(b)
-                                except Exception:
-                                    continue
-                            return False
+                            return self.click_expedition_target(expedition_target=target_index, logger_callback=logger_callback)
                     except Exception:
                         continue
             except Exception:
