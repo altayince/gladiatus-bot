@@ -1125,13 +1125,72 @@ class GladiatusBot:
                 logger_callback(f"Error navigating to Overview: {e}")
             return False
 
+    def open_first_inventory_bag(self, logger_callback=None):
+        """Open the first inventory bag before searching for healing items."""
+        try:
+            bag_candidates = [
+                (By.CSS_SELECTOR, "a.awesome-tabs.current[data-bag-number='512']"),
+                (By.CSS_SELECTOR, "a.awesome-tabs[data-bag-number='512']"),
+                (By.XPATH, "//a[contains(@class, 'awesome-tabs') and @data-bag-number='512']"),
+            ]
+            for by, value in bag_candidates:
+                try:
+                    bag = self.driver.find_element(by, value)
+                    if bag.is_displayed():
+                        if "current" not in (bag.get_attribute("class") or ""):
+                            self._safe_click(bag)
+                            time.sleep(0.5)
+                        if logger_callback:
+                            logger_callback("Opened first inventory bag")
+                        return True
+                except Exception:
+                    continue
+
+            if logger_callback:
+                logger_callback("First inventory bag not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening first inventory bag: {e}")
+            return False
+
+    def ensure_avatar_visible(self, logger_callback=None):
+        """Select the standard battle doll so the avatar drop target is visible."""
+        try:
+            avatar_candidates = [
+                (By.XPATH, "//div[contains(@class, 'charmercsel') and contains(@class, 'active') and .//div[contains(@class, 'doll1')]]"),
+                (By.XPATH, "//div[contains(@class, 'charmercsel') and .//div[contains(@class, 'doll1')]]"),
+                (By.XPATH, "//div[contains(@class, 'charmercsel') and contains(@onclick, 'doll=1')]"),
+            ]
+            for by, value in avatar_candidates:
+                try:
+                    avatar = self.driver.find_element(by, value)
+                    if avatar.is_displayed():
+                        if "active" not in (avatar.get_attribute("class") or ""):
+                            self._safe_click(avatar)
+                            time.sleep(0.5)
+                        if logger_callback:
+                            logger_callback("Selected standard battle avatar")
+                        return True
+                except Exception:
+                    continue
+
+            if logger_callback:
+                logger_callback("Standard battle avatar not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error selecting avatar: {e}")
+            return False
+
     def find_healing_items(self, timeout=5):
         """Find all healing items (content-type 64) in inventory."""
         end = time.time() + timeout
         while time.time() < end:
             try:
                 items = self.driver.find_elements(
-                    By.XPATH, "//div[@data-content-type='64'][contains(@class, 'item-i')]"
+                    By.XPATH,
+                    "//div[@data-container-number='512' and @data-content-type='64' and contains(@class, 'item-i')]",
                 )
                 visible = [item for item in items if item.is_displayed()]
                 if visible:
@@ -1142,7 +1201,7 @@ class GladiatusBot:
         return []
 
     def drag_item_to_avatar(self, item_element, logger_callback=None):
-        """Drag a healing item to the avatar drop zone (data-container-number='8')."""
+        """Drag a healing item to the avatar drop zone."""
         try:
             avatar_drop = self.driver.find_element(
                 By.XPATH,
@@ -1171,6 +1230,12 @@ class GladiatusBot:
         """Navigate to Overview, use a healing item on avatar, verify HP above threshold."""
         try:
             if not self.navigate_to_overview(logger_callback=logger_callback):
+                return False
+
+            if not self.open_first_inventory_bag(logger_callback=logger_callback):
+                return False
+
+            if not self.ensure_avatar_visible(logger_callback=logger_callback):
                 return False
 
             items = self.find_healing_items()
