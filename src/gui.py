@@ -155,12 +155,16 @@ class GladiatusGUI:
 
         main_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
         expedition_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
+        dungeon_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
         notebook.add(main_tab, text="Main")
         notebook.add(expedition_tab, text="Expedition")
+        notebook.add(dungeon_tab, text="Dungeon")
         main_tab.columnconfigure(0, weight=1)
         main_tab.rowconfigure(3, weight=1)
         expedition_tab.columnconfigure(0, weight=1)
-        expedition_tab.rowconfigure(1, weight=1)
+        expedition_tab.rowconfigure(0, weight=1)
+        dungeon_tab.columnconfigure(0, weight=1)
+        dungeon_tab.rowconfigure(0, weight=1)
 
         right = ttk.Frame(shell, style="App.TFrame")
         right.grid(row=1, column=1, sticky="nsew")
@@ -171,7 +175,7 @@ class GladiatusGUI:
         self._build_mechanics_panel(main_tab)
         self._build_log_panel(main_tab)
         self._build_expedition_panel(expedition_tab)
-        self._build_dungeon_panel(expedition_tab)
+        self._build_dungeon_panel(dungeon_tab)
 
         self._build_status_panel(right)
         self._build_notes_panel(right)
@@ -334,7 +338,7 @@ class GladiatusGUI:
 
     def _build_dungeon_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
-        panel.grid(row=1, column=0, sticky="ew")
+        panel.grid(row=0, column=0, sticky="ew")
         panel.columnconfigure(0, weight=1)
 
         ttk.Label(panel, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
