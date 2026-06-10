@@ -16,6 +16,16 @@ logging.basicConfig(level=logging.INFO)
 
 
 class GladiatusBot:
+    EXPEDITION_LOCATIONS = {
+        "grimwood": 0,
+        "pirate harbour": 1,
+        "misty mountains": 2,
+        "wolf cave": 3,
+        "ancient temple": 4,
+        "barbarian village": 5,
+        "bandit camp": 6,
+    }
+
     def __init__(self, headless=True, timeout=15):
         options = Options()
         if headless:
@@ -969,7 +979,7 @@ class GladiatusBot:
                 logger_callback(info["message"])
             return info
 
-    def attempt_expedition_if_ready(self, expedition_target=1, logger_callback=None):
+    def attempt_expedition_if_ready(self, expedition_location="Grimwood", expedition_target=1, logger_callback=None):
         """Check cooldown bar; if ready and attempts > 0 perform one expedition click.
         Returns a dict describing the single click attempt."""
         info = {"clicked": False, "attempts_before": None, "attempts_after": None, "message": ""}
@@ -1016,8 +1026,15 @@ class GladiatusBot:
 
             # perform click
             if logger_callback:
-                logger_callback(f"Expedition ready and attempts available: {cur} / {mx} — clicking...")
+                logger_callback(
+                    f"Expedition ready and attempts available: {cur} / {mx} — opening {expedition_location} and clicking target {expedition_target}..."
+                )
             previous_url = self.driver.current_url
+            if not self.open_expedition_location(expedition_location, logger_callback=logger_callback):
+                info["message"] = f"Could not open expedition location: {expedition_location}"
+                if logger_callback:
+                    logger_callback(info["message"])
+                return info
             clicked = self.click_expedition_target(expedition_target=expedition_target, logger_callback=logger_callback)
             info["clicked"] = clicked
             if clicked:
@@ -1041,6 +1058,111 @@ class GladiatusBot:
     def click_leftmost_expedition(self):
         """Click the first enabled expedition button. Returns True if clicked."""
         return self.click_expedition_target(expedition_target=1)
+
+    def _normalize_expedition_location(self, expedition_location):
+        if isinstance(expedition_location, int):
+            for label, loc in self.EXPEDITION_LOCATIONS.items():
+                if loc == expedition_location:
+                    return label, loc
+
+        if isinstance(expedition_location, str):
+            normalized = expedition_location.strip().lower()
+            if normalized.isdigit():
+                for label, loc in self.EXPEDITION_LOCATIONS.items():
+                    if str(loc) == normalized:
+                        return label, loc
+            for label, loc in self.EXPEDITION_LOCATIONS.items():
+                if normalized == label:
+                    return label, loc
+
+        return "grimwood", self.EXPEDITION_LOCATIONS["grimwood"]
+
+    def open_country_map(self, logger_callback=None):
+        """Open the country map submenu from the main menu."""
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "a.submenuswitch[href*='submod=country']"),
+                (By.XPATH, "//a[contains(@class,'submenuswitch') and contains(@href,'submod=country')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "#submenu2 a.menuitem[href*='mod=location']"),
+                                        (By.CSS_SELECTOR, "a.menuitem[href*='mod=location']"),
+                                    ],
+                                    url_keywords=["mod=map", "submod=country"],
+                                    timeout=10,
+                                ):
+                                    if logger_callback:
+                                        logger_callback("Opened country map submenu")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("Country map submenu switch not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening country map submenu: {e}")
+            return False
+
+    def open_expedition_location(self, expedition_location, logger_callback=None):
+        """Open the selected expedition location from the country map submenu."""
+        try:
+            label, loc = self._normalize_expedition_location(expedition_location)
+            if not self.ensure_game_tab():
+                if logger_callback:
+                    logger_callback("Could not find game tab for expedition location")
+                return False
+
+            self.close_overlays()
+
+            if logger_callback:
+                logger_callback(f"Opening expedition location: {label}")
+
+            if not self.open_country_map(logger_callback=logger_callback):
+                return False
+
+            candidates = [
+                (By.CSS_SELECTOR, f"#submenu2 a.menuitem[href*='mod=location'][href*='loc={loc}']"),
+                (By.CSS_SELECTOR, f"a.menuitem[href*='mod=location'][href*='loc={loc}']"),
+                (By.XPATH, f"//a[contains(@class,'menuitem') and contains(@href,'mod=location') and contains(@href,'loc={loc}')]"),
+                (By.XPATH, f"//a[contains(normalize-space(.), '{label}')]"),
+            ]
+
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            previous_url = self.driver.current_url
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "button.expedition_button"),
+                                        (By.CSS_SELECTOR, "#expedition_list .expedition_box"),
+                                    ],
+                                    url_keywords=[f"loc={loc}", "mod=location"],
+                                    timeout=12,
+                                ):
+                                    return True
+                                if self.driver.current_url != previous_url:
+                                    return True
+                except Exception:
+                    continue
+
+            if logger_callback:
+                logger_callback(f"Expedition location '{label}' not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening expedition location: {e}")
+            return False
 
     def click_expedition_target(self, expedition_target=1, logger_callback=None):
         """Click the selected expedition target by 1-based expedition box index."""
