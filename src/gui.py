@@ -33,6 +33,7 @@ class GladiatusGUI:
         ("Barbarian Village", "5"),
         ("Bandit Camp", "6"),
     ]
+    DUNGEON_LOCATIONS = ["1", "2", "3", "4"]
 
     def __init__(self, root):
         self.root = root
@@ -59,6 +60,7 @@ class GladiatusGUI:
         self.hp_min_var = tk.StringVar(value="25")
         self.expedition_location_var = tk.StringVar(value="Grimwood")
         self.expedition_target_var = tk.StringVar(value="1")
+        self.dungeon_location_var = tk.StringVar(value="1")
 
         self._settings_suspended = True
         self._configure_styles()
@@ -169,6 +171,7 @@ class GladiatusGUI:
         self._build_mechanics_panel(main_tab)
         self._build_log_panel(main_tab)
         self._build_expedition_panel(expedition_tab)
+        self._build_dungeon_panel(expedition_tab)
 
         self._build_status_panel(right)
         self._build_notes_panel(right)
@@ -329,6 +332,31 @@ class GladiatusGUI:
                 font=("Segoe UI", 9),
             ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
 
+    def _build_dungeon_panel(self, parent):
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel.grid(row=1, column=0, sticky="ew")
+        panel.columnconfigure(0, weight=1)
+
+        ttk.Label(panel, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            panel,
+            text="Dungeon icin submenu'den lokasyon secilir, moblar random dalinir.",
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+
+        dungeon_row = ttk.Frame(panel, style="Panel.TFrame")
+        dungeon_row.grid(row=2, column=0, sticky="ew")
+        dungeon_row.columnconfigure(1, weight=1)
+        tk.Label(dungeon_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        self.dungeon_combo = ttk.Combobox(
+            dungeon_row,
+            textvariable=self.dungeon_location_var,
+            values=self.DUNGEON_LOCATIONS,
+            state="readonly",
+            width=12,
+        )
+        self.dungeon_combo.grid(row=0, column=1, sticky="w")
+
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
         panel.grid(row=3, column=0, sticky="nsew")
@@ -405,6 +433,7 @@ class GladiatusGUI:
             self.hp_min_var,
             self.expedition_location_var,
             self.expedition_target_var,
+            self.dungeon_location_var,
         ):
             variable.trace_add("write", self._on_settings_changed)
 
@@ -422,6 +451,7 @@ class GladiatusGUI:
             "hp_min": self.hp_min_var.get().strip() or "25",
             "expedition_location": self.get_expedition_location(),
             "expedition_target": self.get_expedition_target(),
+            "dungeon_location": self.get_dungeon_location(),
         }
 
     def _coerce_bool(self, value, default):
@@ -460,6 +490,9 @@ class GladiatusGUI:
 
             expedition_target = data.get("expedition_target", "1")
             self.expedition_target_var.set(str(self._coerce_expedition_target(expedition_target)))
+
+            dungeon_location = data.get("dungeon_location", "1")
+            self.dungeon_location_var.set(self._coerce_dungeon_location(dungeon_location))
         except Exception as exc:
             logger.warning("Could not load GUI settings: %s", exc)
 
@@ -683,6 +716,15 @@ class GladiatusGUI:
     def get_expedition_target(self):
         return self._coerce_expedition_target(self.expedition_target_var.get())
 
+    def _coerce_dungeon_location(self, value):
+        value = str(value).strip()
+        if value in self.DUNGEON_LOCATIONS:
+            return value
+        return self.DUNGEON_LOCATIONS[0]
+
+    def get_dungeon_location(self):
+        return self._coerce_dungeon_location(self.dungeon_location_var.get())
+
     def append_log(self, msg):
         try:
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -750,7 +792,10 @@ class GladiatusGUI:
 
                 if self.dungeon_var.get():
                     try:
-                        self.bot.attempt_dungeon_if_ready(logger_callback=self.append_log)
+                        self.bot.attempt_dungeon_if_ready(
+                            dungeon_location=self.get_dungeon_location(),
+                            logger_callback=self.append_log,
+                        )
                     except Exception as exc:
                         self.append_log(f"Dungeon attempt error: {exc}")
                 else:

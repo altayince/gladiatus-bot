@@ -8,6 +8,7 @@ This repository uses an issue-first, branch-per-task, PR-only flow.
 - Name branches with the GLA ticket number:
   - `feature/GLA-[ticket]-description`
   - `bugfix/GLA-[ticket]-description`
+- Before creating a new feature or bugfix branch, checkout `main` and pull the latest changes, then branch from that updated state.
 - Do all development on the task branch.
 - Open a PR into `main`.
 - Assign the PR to `@me` and add it to the `GLA` project.
@@ -24,11 +25,12 @@ This repository uses an issue-first, branch-per-task, PR-only flow.
 
 ## Recommended Flow
 1. Create the issue in GitHub, assign it to yourself, and note the issue number.
-2. Create a branch from `main` using the issue number.
-3. Install local hooks once per clone.
-4. Implement the change on the task branch.
-5. Push the branch and open a PR.
-6. Wait for review and approval.
+2. Checkout `main` and pull the latest changes.
+3. Create a branch from the updated `main` using the issue number.
+4. Install local hooks once per clone.
+5. Implement the change on the task branch.
+6. Push the branch and open a PR.
+7. Wait for review and approval.
 
 ## Branch Naming Examples
 - `feature/GLA-2-workflow-enforcement`

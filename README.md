@@ -7,7 +7,7 @@ GLA is a Python + Selenium automation tool for Gladiatus. It logs in, manages th
 - Find and activate the active game tab
 - Check expedition readiness, open the country map submenu, and trigger a selected expedition location
 - Pick a specific expedition location and mob target from the GUI and keep both choices between restarts
-- Check dungeon readiness and click a random dungeon attack target
+- Check dungeon readiness, open a selected dungeon location from the submenu, and click a random dungeon attack target
 - Check Circus Turma readiness and attack the lowest-level target
 - Refill HP when the current HP drops below a threshold
 - Show the current refill potion count from the first inventory bag on the main screen
@@ -17,10 +17,11 @@ GLA is a Python + Selenium automation tool for Gladiatus. It logs in, manages th
 Every change follows the same issue-first flow:
 1. Create a GitHub issue and describe the task.
 2. Assign the issue to `@me`.
-3. Create a branch named `feature/GLA-[ticket]-description` or `bugfix/GLA-[ticket]-description`.
-4. Do the work only on that branch.
-5. Open a PR into `main`.
-6. Review the PR yourself and merge once checks pass.
+3. Checkout `main` and pull the latest changes.
+4. Create a branch named `feature/GLA-[ticket]-description` or `bugfix/GLA-[ticket]-description` from the updated `main`.
+5. Do the work only on that branch.
+6. Open a PR into `main`.
+7. Review the PR yourself and merge once checks pass.
 
 Direct pushes to `main` are blocked by GitHub branch protection and local hooks. When a PR is merged, the linked GLA issue closes automatically; closing or deleting the PR leaves the issue open.
 
@@ -65,5 +66,5 @@ python gui_main.py
 ## Notes
 - Game selectors and flow logic live in `src/selenium_bot.py`.
 - The GUI uses the same bot class and provides one panel for the main mechanics.
-- The GUI now splits main controls from expedition details, so the expedition location and target live in their own tab.
+- The GUI now splits main controls from expedition details, so the expedition and dungeon location controls live in their own tab.
 
