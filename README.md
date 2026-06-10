@@ -7,7 +7,7 @@ GLA is a Python + Selenium automation tool for Gladiatus. It logs in, manages th
 - Find and activate the active game tab
 - Check expedition readiness, open the country map submenu, and trigger a selected expedition location
 - Pick a specific expedition location and mob target from the GUI and keep both choices between restarts
-- Check dungeon readiness, open a selected dungeon location from the submenu, and click a random dungeon attack target
+- Check dungeon readiness, open a selected dungeon location from the submenu, choose a dungeon difficulty, and click a random dungeon attack target
 - Check Circus Turma readiness and attack the lowest-level target
 - Refill HP when the current HP drops below a threshold
 - Show the current refill potion count from the first inventory bag on the main screen
@@ -66,5 +66,5 @@ python gui_main.py
 ## Notes
 - Game selectors and flow logic live in `src/selenium_bot.py`.
 - The GUI uses the same bot class and provides one panel for the main mechanics.
-- The GUI now splits main controls from expedition details, so the expedition and dungeon location controls live in their own tab.
+- The GUI now splits main controls from expedition details, so the expedition and dungeon controls live in their own tabs.
 

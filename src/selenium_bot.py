@@ -731,7 +731,7 @@ class GladiatusBot:
                 logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
             return False
 
-    def attempt_dungeon_if_ready(self, dungeon_location="1", logger_callback=None):
+    def attempt_dungeon_if_ready(self, dungeon_location="1", dungeon_difficulty="Normal", logger_callback=None):
         """If dungeon cooldown indicates ready, navigate and click a random attack.
         Returns dict with result."""
         info = {"clicked": False, "message": ""}
@@ -754,6 +754,7 @@ class GladiatusBot:
 
             clicked = self.open_dungeon_and_random_attack(
                 dungeon_location=dungeon_location,
+                dungeon_difficulty=dungeon_difficulty,
                 logger_callback=logger_callback,
             )
             info["clicked"] = bool(clicked)
@@ -1201,6 +1202,13 @@ class GladiatusBot:
 
         return "grimwood", self.DUNGEON_LOCATIONS["grimwood"]
 
+    def _normalize_dungeon_difficulty(self, dungeon_difficulty):
+        if isinstance(dungeon_difficulty, str):
+            normalized = dungeon_difficulty.strip().lower()
+            if normalized == "advanced":
+                return "Advanced", "dif2"
+        return "Normal", "dif1"
+
     def open_dungeon_location(self, dungeon_location, logger_callback=None):
         """Open the selected dungeon location from the country map submenu."""
         try:
@@ -1219,6 +1227,33 @@ class GladiatusBot:
         except Exception as e:
             if logger_callback:
                 logger_callback(f"Error opening dungeon location: {e}")
+            return False
+
+    def _click_dungeon_difficulty(self, dungeon_difficulty="Normal", logger_callback=None):
+        """Click Normal or Advanced if the Enter Dungeon card is present."""
+        try:
+            label, name = self._normalize_dungeon_difficulty(dungeon_difficulty)
+            candidates = [
+                (By.CSS_SELECTOR, f"input.button1[name='{name}']"),
+                (By.CSS_SELECTOR, f"input[name='{name}']"),
+                (By.XPATH, f"//input[@type='submit' and @name='{name}']"),
+                (By.XPATH, f"//input[@type='submit' and @value='{label}']"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if logger_callback:
+                                    logger_callback(f"Selected dungeon difficulty: {label}")
+                                return True
+                except Exception:
+                    continue
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error selecting dungeon difficulty: {e}")
             return False
 
     def click_expedition_target(self, expedition_target=1, logger_callback=None):
@@ -1286,7 +1321,7 @@ class GladiatusBot:
         except Exception:
             return False
 
-    def open_dungeon_and_random_attack(self, dungeon_location="1", logger_callback=None, max_retries=3):
+    def open_dungeon_and_random_attack(self, dungeon_location="1", dungeon_difficulty="Normal", logger_callback=None, max_retries=3):
         """Open the dungeon location and click a random minimap attack.
         Returns True if an attack element was clicked."""
         try:
@@ -1347,6 +1382,8 @@ class GladiatusBot:
                     if logger_callback:
                         logger_callback("Error navigating to dungeon page")
                     return False
+
+            self._click_dungeon_difficulty(dungeon_difficulty, logger_callback=logger_callback)
 
             visible = self._wait_for_dungeon_attack_elements(timeout=10)
             if not visible:
