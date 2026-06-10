@@ -24,6 +24,16 @@ class GladiatusGUI:
     WARNING = "#f59e0b"
     DANGER = "#ef4444"
 
+    EXPEDITION_LOCATIONS = [
+        ("Grimwood", "0"),
+        ("Pirate Harbour", "1"),
+        ("Misty Mountains", "2"),
+        ("Wolf Cave", "3"),
+        ("Ancient Temple", "4"),
+        ("Barbarian Village", "5"),
+        ("Bandit Camp", "6"),
+    ]
+
     def __init__(self, root):
         self.root = root
         self.root.title("Gladiatus Bot Control")
@@ -46,6 +56,7 @@ class GladiatusGUI:
         self.circus_var = tk.BooleanVar(value=True)
         self.refill_hp_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
+        self.expedition_location_var = tk.StringVar(value="Grimwood")
         self.expedition_target_var = tk.StringVar(value="1")
 
         self._settings_suspended = True
@@ -259,15 +270,28 @@ class GladiatusGUI:
         panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
 
-        ttk.Label(panel, text="Expedition Target", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(panel, text="Expedition Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
             panel,
-            text="Expedition alaninda 4 mob arasindan hangisinin hedeflenecegini sec.",
+            text="Hermit ve event haric country map uzerindeki lokasyonlardan birini sec.",
             style="Muted.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(4, 12))
 
+        location_row = ttk.Frame(panel, style="Panel.TFrame")
+        location_row.grid(row=2, column=0, sticky="ew", pady=(0, 14))
+        location_row.columnconfigure(1, weight=1)
+        tk.Label(location_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        self.location_combo = ttk.Combobox(
+            location_row,
+            textvariable=self.expedition_location_var,
+            values=[label for label, _ in self.EXPEDITION_LOCATIONS],
+            state="readonly",
+            width=24,
+        )
+        self.location_combo.grid(row=0, column=1, sticky="w")
+
         choice_box = ttk.Frame(panel, style="Panel.TFrame")
-        choice_box.grid(row=2, column=0, sticky="ew")
+        choice_box.grid(row=3, column=0, sticky="ew")
         choice_box.columnconfigure(0, weight=1)
 
         options = [
@@ -369,6 +393,7 @@ class GladiatusGUI:
             self.circus_var,
             self.refill_hp_var,
             self.hp_min_var,
+            self.expedition_location_var,
             self.expedition_target_var,
         ):
             variable.trace_add("write", self._on_settings_changed)
@@ -385,6 +410,7 @@ class GladiatusGUI:
             "circus": bool(self.circus_var.get()),
             "refill_hp": bool(self.refill_hp_var.get()),
             "hp_min": self.hp_min_var.get().strip() or "25",
+            "expedition_location": self.get_expedition_location(),
             "expedition_target": self.get_expedition_target(),
         }
 
@@ -418,6 +444,9 @@ class GladiatusGUI:
 
             hp_min = data.get("hp_min", "25")
             self.hp_min_var.set(str(hp_min))
+
+            expedition_location = data.get("expedition_location", "Grimwood")
+            self.expedition_location_var.set(self._coerce_expedition_location(expedition_location))
 
             expedition_target = data.get("expedition_target", "1")
             self.expedition_target_var.set(str(self._coerce_expedition_target(expedition_target)))
@@ -617,6 +646,17 @@ class GladiatusGUI:
             target = 1
         return max(1, min(4, target))
 
+    def _coerce_expedition_location(self, value):
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            for label, _ in self.EXPEDITION_LOCATIONS:
+                if normalized == label.lower():
+                    return label
+        return self.EXPEDITION_LOCATIONS[0][0]
+
+    def get_expedition_location(self):
+        return self._coerce_expedition_location(self.expedition_location_var.get())
+
     def get_expedition_target(self):
         return self._coerce_expedition_target(self.expedition_target_var.get())
 
@@ -676,6 +716,7 @@ class GladiatusGUI:
                 if self.expedition_var.get():
                     if hp_ready:
                         self.bot.attempt_expedition_if_ready(
+                            expedition_location=self.get_expedition_location(),
                             expedition_target=self.get_expedition_target(),
                             logger_callback=self.append_log,
                         )
