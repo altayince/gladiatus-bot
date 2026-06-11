@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Attacks, Locations ve Recovery bolumleri cizgilerle ayrildi ve Expedition/Dungeon kartlari hizalandi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Attacks, Locations ve Recovery bolumleri cizgilerle ayrildi ve Dungeon toggle kart basligina hizalandi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -271,7 +271,6 @@ class GladiatusGUI:
         attack_toggles.columnconfigure(1, weight=1)
 
         ttk.Checkbutton(attack_toggles, text="Expedition", variable=self.expedition_var, style="Modern.TCheckbutton").grid(row=0, column=0, sticky="w", pady=4)
-        ttk.Checkbutton(attack_toggles, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="w", pady=4)
         ttk.Checkbutton(attack_toggles, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
 
         ttk.Separator(attacks_box, orient="horizontal").grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 12))
@@ -347,12 +346,16 @@ class GladiatusGUI:
         dungeon_section = ttk.Frame(locations_box, style="Panel.TFrame")
         dungeon_section.grid(row=0, column=1, sticky="nw", padx=(12, 0), pady=(0, 0))
         dungeon_section.columnconfigure(1, weight=1)
-        ttk.Label(dungeon_section, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        dungeon_header = ttk.Frame(dungeon_section, style="Panel.TFrame")
+        dungeon_header.grid(row=0, column=0, sticky="ew")
+        dungeon_header.columnconfigure(0, weight=1)
+        ttk.Label(dungeon_header, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Checkbutton(dungeon_header, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="e")
         ttk.Label(
             dungeon_section,
             text="Dungeon, expedition ile ayni country map lokasyonlari kullanir.",
             style="Muted.TLabel",
-        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+        ).grid(row=1, column=0, sticky="w", pady=(6, 12))
 
         dungeon_row = ttk.Frame(dungeon_section, style="Panel.TFrame")
         dungeon_row.grid(row=2, column=0, sticky="ew")
