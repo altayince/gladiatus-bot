@@ -221,6 +221,9 @@ class GladiatusBot:
             (By.CSS_SELECTOR, "#blackoutDialognotification #linknotification"),
             (By.CSS_SELECTOR, "#blackoutDialognotification #linkcancelnotification"),
             (By.CSS_SELECTOR, "#blackoutDialogbod #linkbod"),
+            (By.CSS_SELECTOR, "#blackoutDialogLoginBonus #linkLoginBonus"),
+            (By.CSS_SELECTOR, "#blackoutDialogLoginBonus .loginbonus_buttons input[type='button']"),
+            (By.XPATH, "//div[@id='blackoutDialogLoginBonus']//input[@type='button' and contains(@value,'Bonus')]"),
         ]
         for _ in range(2):
             for by, value in selectors:
