@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Hesap ve Durum ayni satira 50/50 yerlestirildi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -174,7 +174,13 @@ class GladiatusGUI:
         right.grid(row=1, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
 
-        self._build_credentials_panel(left)
+        top_row = ttk.Frame(left, style="App.TFrame")
+        top_row.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        top_row.columnconfigure(0, weight=1)
+        top_row.columnconfigure(1, weight=1)
+
+        self._build_credentials_panel(top_row)
+        self._build_status_panel(top_row)
         self._build_controls_panel(left)
         self._build_mechanics_panel(left)
         self._build_log_panel(left)
@@ -244,8 +250,6 @@ class GladiatusGUI:
             width=18,
         )
         self.captcha_btn.grid(row=0, column=1, sticky="w", padx=(12, 0))
-
-        self._build_status_panel(panel)
 
     def _build_controls_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
@@ -597,7 +601,7 @@ class GladiatusGUI:
 
     def _build_status_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
-        panel.grid(row=2, column=1, sticky="ne", padx=(16, 0), pady=(2, 0))
+        panel.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
 
