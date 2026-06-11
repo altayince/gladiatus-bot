@@ -199,7 +199,11 @@ class GladiatusGUI:
             bg="#0b1220",
             fg=self.TEXT,
             insertbackground=self.TEXT,
-            relief="flat",
+            relief="solid",
+            bd=1,
+            highlightthickness=1,
+            highlightbackground="#3b4a63",
+            highlightcolor="#53b7ff",
             font=("Segoe UI", 11),
         )
         self.email_entry.grid(row=3, column=0, sticky="ew", padx=(0, 8), ipady=8)
@@ -212,7 +216,11 @@ class GladiatusGUI:
             bg="#0b1220",
             fg=self.TEXT,
             insertbackground=self.TEXT,
-            relief="flat",
+            relief="solid",
+            bd=1,
+            highlightthickness=1,
+            highlightbackground="#3b4a63",
+            highlightcolor="#53b7ff",
             font=("Segoe UI", 11),
         )
         self.password_entry.grid(row=3, column=1, sticky="ew", ipady=8)
@@ -235,16 +243,15 @@ class GladiatusGUI:
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
         panel.grid(row=1, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
-        panel.columnconfigure(1, weight=1)
 
-        ttk.Label(panel, text="Kontrol", style="CardTitle.TLabel").grid(row=0, column=0, columnspan=2, sticky="w")
-        ttk.Label(panel, text="Play dongusu 60 saniyede bir secili mekanikleri sirayla dener.", style="Muted.TLabel").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 12))
+        ttk.Label(panel, text="Kontrol", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(panel, text="Play dongusu 60 saniyede bir secili mekanikleri sirayla dener.", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 12))
 
         self.play_btn = ttk.Button(panel, text="Play", style="Primary.TButton", command=self.toggle_play)
-        self.play_btn.grid(row=2, column=0, sticky="ew", padx=(0, 8))
+        self.play_btn.grid(row=2, column=0, sticky="ew")
 
         self.stop_btn = ttk.Button(panel, text="Stop", style="Danger.TButton", command=self.stop_play)
-        self.stop_btn.grid(row=2, column=1, sticky="ew")
+        self.stop_btn.grid(row=3, column=0, sticky="ew", pady=(8, 0))
         self.stop_btn.config(state="disabled")
 
     def _build_mechanics_panel(self, parent):
