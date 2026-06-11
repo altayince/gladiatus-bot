@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, Hesap ve Durum ayni satira 50/50 yerlestirildi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log sag panele tasindi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -130,8 +130,8 @@ class GladiatusGUI:
 
         shell = ttk.Frame(self.root, style="App.TFrame", padding=18)
         shell.grid(sticky="nsew")
-        shell.columnconfigure(0, weight=3)
-        shell.columnconfigure(1, weight=2)
+        shell.columnconfigure(0, weight=1)
+        shell.columnconfigure(1, weight=1)
         shell.rowconfigure(1, weight=1)
 
         header = ttk.Frame(shell, style="PanelAlt.TFrame", padding=18)
@@ -197,8 +197,8 @@ class GladiatusGUI:
         right.grid(row=0, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
 
-        scroll_frame.columnconfigure(0, weight=3)
-        scroll_frame.columnconfigure(1, weight=2)
+        scroll_frame.columnconfigure(0, weight=1)
+        scroll_frame.columnconfigure(1, weight=1)
 
         top_row = ttk.Frame(left, style="App.TFrame")
         top_row.grid(row=0, column=0, sticky="ew", pady=(0, 12))
@@ -209,8 +209,7 @@ class GladiatusGUI:
         self._build_status_panel(top_row)
         self._build_controls_panel(left)
         self._build_mechanics_panel(left)
-        self._build_log_panel(left)
-
+        self._build_log_panel(right)
         self._build_notes_panel(right)
 
         self._bind_mousewheel(canvas)
@@ -605,9 +604,8 @@ class GladiatusGUI:
 
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
-        panel.grid(row=3, column=0, sticky="nsew")
+        panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
-        panel.rowconfigure(1, weight=1)
 
         ttk.Label(panel, text="Activity Log", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         self.log_text = tk.Text(
@@ -622,7 +620,7 @@ class GladiatusGUI:
             padx=10,
             pady=10,
         )
-        self.log_text.grid(row=1, column=0, sticky="nsew", pady=(12, 0))
+        self.log_text.grid(row=1, column=0, sticky="ew", pady=(12, 0))
         log_scroll = ttk.Scrollbar(panel, orient="vertical", command=self.log_text.yview)
         log_scroll.grid(row=1, column=1, sticky="ns", pady=(12, 0))
         self.log_text.configure(yscrollcommand=log_scroll.set)
@@ -655,7 +653,7 @@ class GladiatusGUI:
 
     def _build_notes_panel(self, parent):
         panel = ttk.Frame(parent, style="PanelAlt.TFrame", padding=16)
-        panel.grid(row=0, column=0, sticky="ew")
+        panel.grid(row=1, column=0, sticky="ew")
         panel.columnconfigure(0, weight=1)
 
         tk.Label(panel, text="Neler degisti?", bg=self.PANEL_ALT, fg=self.TEXT, font=("Segoe UI Semibold", 12)).grid(
