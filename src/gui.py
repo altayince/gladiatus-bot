@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon toggle hizasi duzeltildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; login alanlari gorunur hale getirildi, Play/Stop buton genislikleri duzeltildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -160,7 +160,7 @@ class GladiatusGUI:
             padx=12,
             pady=6,
         )
-        self.status_badge.grid(row=0, column=1, rowspan=2, sticky="e")
+        self.status_badge.grid(row=1, column=1, sticky="e", padx=(16, 0))
 
         left = ttk.Frame(shell, style="App.TFrame")
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
@@ -191,53 +191,71 @@ class GladiatusGUI:
         ttk.Label(panel, text="Hesap", style="CardTitle.TLabel").grid(row=0, column=0, columnspan=2, sticky="w")
         ttk.Label(panel, text="Giristen sonra ayni oturum uzerinden mekanikler doner.", style="Muted.TLabel").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 12))
 
-        tk.Label(panel, text="Email", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=2, column=0, sticky="w")
-        tk.Label(panel, text="Password", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=2, column=1, sticky="w")
+        credentials_row = ttk.Frame(panel, style="Panel.TFrame")
+        credentials_row.grid(row=2, column=0, columnspan=2, sticky="ew")
+        credentials_row.columnconfigure(0, weight=1)
+        credentials_row.columnconfigure(1, weight=1)
 
+        email_box = ttk.Frame(credentials_row, style="Panel.TFrame")
+        email_box.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        email_box.columnconfigure(0, weight=1)
+        tk.Label(email_box, text="Email", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        email_frame = tk.Frame(email_box, bg="#0b1220", highlightthickness=1, highlightbackground="#3b4a63", highlightcolor="#53b7ff")
+        email_frame.grid(row=1, column=0, sticky="ew")
+        email_frame.columnconfigure(0, weight=1)
         self.email_entry = tk.Entry(
-            panel,
+            email_frame,
             bg="#0b1220",
             fg=self.TEXT,
             insertbackground=self.TEXT,
-            relief="solid",
-            bd=1,
-            highlightthickness=1,
-            highlightbackground="#3b4a63",
-            highlightcolor="#53b7ff",
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
             font=("Segoe UI", 11),
         )
-        self.email_entry.grid(row=3, column=0, sticky="ew", padx=(0, 8), ipady=8)
+        self.email_entry.grid(row=0, column=0, sticky="ew", padx=10, pady=8, ipady=2)
         if USERNAME:
             self.email_entry.insert(0, USERNAME)
 
+        password_box = ttk.Frame(credentials_row, style="Panel.TFrame")
+        password_box.grid(row=0, column=1, sticky="ew")
+        password_box.columnconfigure(0, weight=1)
+        tk.Label(password_box, text="Password", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        password_frame = tk.Frame(password_box, bg="#0b1220", highlightthickness=1, highlightbackground="#3b4a63", highlightcolor="#53b7ff")
+        password_frame.grid(row=1, column=0, sticky="ew")
+        password_frame.columnconfigure(0, weight=1)
         self.password_entry = tk.Entry(
-            panel,
+            password_frame,
             show="*",
             bg="#0b1220",
             fg=self.TEXT,
             insertbackground=self.TEXT,
-            relief="solid",
-            bd=1,
-            highlightthickness=1,
-            highlightbackground="#3b4a63",
-            highlightcolor="#53b7ff",
+            relief="flat",
+            bd=0,
+            highlightthickness=0,
             font=("Segoe UI", 11),
         )
-        self.password_entry.grid(row=3, column=1, sticky="ew", ipady=8)
+        self.password_entry.grid(row=0, column=0, sticky="ew", padx=10, pady=8, ipady=2)
         if PASSWORD:
             self.password_entry.insert(0, PASSWORD)
 
-        self.login_btn = ttk.Button(panel, text="Login", style="Primary.TButton", command=self.start_login)
-        self.login_btn.grid(row=4, column=0, sticky="w", pady=(14, 0))
+        buttons_row = ttk.Frame(panel, style="Panel.TFrame")
+        buttons_row.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(14, 0))
+        buttons_row.columnconfigure(0, weight=0)
+        buttons_row.columnconfigure(1, weight=0)
+
+        self.login_btn = ttk.Button(buttons_row, text="Login", style="Primary.TButton", command=self.start_login, width=16)
+        self.login_btn.grid(row=0, column=0, sticky="w")
 
         self.captcha_btn = ttk.Button(
-            panel,
+            buttons_row,
             text="CAPTCHA Solved - Continue",
             style="Danger.TButton",
             command=self.captcha_solved_callback,
             state="disabled",
+            width=24,
         )
-        self.captcha_btn.grid(row=4, column=1, sticky="e", pady=(14, 0))
+        self.captcha_btn.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
     def _build_controls_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
@@ -247,11 +265,11 @@ class GladiatusGUI:
         ttk.Label(panel, text="Kontrol", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(panel, text="Play dongusu 60 saniyede bir secili mekanikleri sirayla dener.", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 12))
 
-        self.play_btn = ttk.Button(panel, text="Play", style="Primary.TButton", command=self.toggle_play)
-        self.play_btn.grid(row=2, column=0, sticky="ew")
+        self.play_btn = ttk.Button(panel, text="Play", style="Primary.TButton", command=self.toggle_play, width=16)
+        self.play_btn.grid(row=2, column=0, sticky="w")
 
-        self.stop_btn = ttk.Button(panel, text="Stop", style="Danger.TButton", command=self.stop_play)
-        self.stop_btn.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        self.stop_btn = ttk.Button(panel, text="Stop", style="Danger.TButton", command=self.stop_play, width=16)
+        self.stop_btn.grid(row=3, column=0, sticky="w", pady=(8, 0))
         self.stop_btn.config(state="disabled")
 
     def _build_mechanics_panel(self, parent):
