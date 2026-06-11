@@ -17,6 +17,9 @@ This repository uses an issue-first, branch-per-task, PR-only flow.
 - If the PR is merged, the linked GLA issue closes automatically.
 - If the PR is closed without merge or deleted, the linked issue stays open.
 - Do not push directly to `main`.
+- After each feature or bugfix, update the GUI's `Neler degisti?` panel with a short summary of what changed.
+- Format each new note with the issue number and issue title, then the short summary.
+- Keep the newest update at the top and preserve only the latest 10 entries.
 
 ## Enforced Controls
 - GitHub branch protection blocks direct pushes to `main`.
@@ -29,8 +32,9 @@ This repository uses an issue-first, branch-per-task, PR-only flow.
 3. Create a branch from the updated `main` using the issue number.
 4. Install local hooks once per clone.
 5. Implement the change on the task branch.
-6. Push the branch and open a PR.
-7. Wait for review and approval.
+6. Update the GUI change-notes panel with the issue number, issue title, and a short summary of the work.
+7. Push the branch and open a PR.
+8. Wait for review and approval.
 
 ## Branch Naming Examples
 - `feature/GLA-2-workflow-enforcement`

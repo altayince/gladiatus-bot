@@ -20,8 +20,9 @@ Every change follows the same issue-first flow:
 3. Checkout `main` and pull the latest changes.
 4. Create a branch named `feature/GLA-[ticket]-description` or `bugfix/GLA-[ticket]-description` from the updated `main`.
 5. Do the work only on that branch.
-6. Open a PR into `main`.
-7. Review the PR yourself and merge once checks pass.
+6. Update the GUI `Neler degisti?` panel with the issue number, issue title, and a short summary of the work, keeping the newest note first and only the latest 10 notes.
+7. Open a PR into `main`.
+8. Review the PR yourself and merge once checks pass.
 
 Direct pushes to `main` are blocked by GitHub branch protection and local hooks. When a PR is merged, the linked GLA issue closes automatically; closing or deleting the PR leaves the issue open.
 

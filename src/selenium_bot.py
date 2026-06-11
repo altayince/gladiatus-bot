@@ -1116,6 +1116,605 @@ class GladiatusBot:
                 logger_callback(f"Error opening country map submenu: {e}")
             return False
 
+    def open_city_map(self, logger_callback=None):
+        """Open the city submenu from the main map navigation."""
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "a.submenuswitch[href*='submod=city']"),
+                (By.XPATH, "//a[contains(@class,'submenuswitch') and contains(@href,'submod=city')]"),
+                (By.XPATH, "//div[contains(@class,'menutab_city')]//a[contains(@class,'submenuswitch')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "a.menuitem[href*='mod=inventory'][href*='sub=3']"),
+                                        (By.CSS_SELECTOR, "a.menuitem[href*='mod=inventory']"),
+                                    ],
+                                    url_keywords=["mod=map", "submod=city"],
+                                    timeout=10,
+                                ):
+                                    if logger_callback:
+                                        logger_callback("Opened city submenu")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("City submenu switch not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening city submenu: {e}")
+            return False
+
+    def open_general_goods(self, logger_callback=None):
+        """Open General goods from the city menu."""
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "a.menuitem[href*='mod=inventory'][href*='sub=3']"),
+                (By.XPATH, "//a[contains(@class,'menuitem') and contains(@href,'mod=inventory') and contains(@href,'sub=3')]"),
+                (By.XPATH, "//a[contains(normalize-space(.), 'General goods')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "#shop_nav"),
+                                        (By.CSS_SELECTOR, "#shop, #inv"),
+                                    ],
+                                    url_keywords=["mod=inventory", "sub=3"],
+                                    timeout=12,
+                                ):
+                                    if logger_callback:
+                                        logger_callback("Opened General goods")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("General goods menu item not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening General goods: {e}")
+            return False
+
+    def open_shop_tab_two(self, logger_callback=None):
+        """Open the second shop tab where refill items are expected."""
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "#shop_nav a[href*='subsub=1']"),
+                (By.XPATH, "//div[@id='shop_nav']//a[contains(@href,'subsub=1')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "#shop"),
+                                        (By.CSS_SELECTOR, "#shop .item-i"),
+                                    ],
+                                    url_keywords=["mod=inventory", "sub=3", "subsub=1"],
+                                    timeout=12,
+                                ):
+                                    if logger_callback:
+                                        logger_callback("Opened shop tab II")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("Shop tab II not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening shop tab II: {e}")
+            return False
+
+    def _parse_int_attr(self, element, attr_name, default=None):
+        try:
+            value = element.get_attribute(attr_name)
+            if value is None:
+                return default
+            return int(str(value).strip())
+        except Exception:
+            return default
+
+    def _get_inventory_occupancy(self, grid_element):
+        occupancy = set()
+        for item in grid_element.find_elements(By.CSS_SELECTOR, ".item-i"):
+            try:
+                if not item.is_displayed():
+                    continue
+                start_x = self._parse_int_attr(item, "data-position-x", 1)
+                start_y = self._parse_int_attr(item, "data-position-y", 1)
+                size_x = self._parse_int_attr(item, "data-measurement-x", 1)
+                size_y = self._parse_int_attr(item, "data-measurement-y", 1)
+                if start_x is None or start_y is None:
+                    continue
+                for x in range(start_x, start_x + max(1, size_x or 1)):
+                    for y in range(start_y, start_y + max(1, size_y or 1)):
+                        occupancy.add((x, y))
+            except Exception:
+                continue
+        return occupancy
+
+    def _get_visible_inventory_dropareas(self, timeout=3, limit=12, logger_callback=None, log_missing=True):
+        try:
+            grid = None
+            candidates = []
+            end = time.time() + timeout
+            while time.time() < end:
+                try:
+                    grid = self.driver.find_element(By.ID, "inv")
+                    if not grid.is_displayed():
+                        time.sleep(0.15)
+                        continue
+                except StaleElementReferenceException:
+                    time.sleep(0.15)
+                    continue
+                except Exception:
+                    time.sleep(0.15)
+                    continue
+
+                candidates = []
+                try:
+                    empty_slots = grid.find_elements(By.CSS_SELECTOR, ".ui-droppable.grid-droparea")
+                except StaleElementReferenceException:
+                    time.sleep(0.15)
+                    continue
+
+                for slot in empty_slots:
+                    try:
+                        if slot.is_displayed():
+                            candidates.append(slot)
+                    except StaleElementReferenceException:
+                        continue
+                    except Exception:
+                        continue
+
+                if candidates:
+                    return grid, candidates[:limit]
+
+                time.sleep(0.15)
+
+            if logger_callback and log_missing:
+                logger_callback("No visible inventory dropareas found")
+            return grid, candidates
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error finding inventory dropareas: {e}")
+            return None, []
+
+    def _get_droparea_key(self, slot):
+        try:
+            style = (slot.get_attribute("style") or "").strip()
+            if style:
+                return style
+        except Exception:
+            pass
+        try:
+            location = slot.location
+            return f"{location.get('x')}:{location.get('y')}"
+        except Exception:
+            return None
+
+    def _get_visible_healing_item_count(self, timeout=2):
+        try:
+            return len(self.find_healing_items(timeout=timeout))
+        except Exception:
+            return None
+
+    def _read_visible_healing_item_count(self, timeout=1.5, refresh_view=False):
+        """Read the visible refill pot count from the current inventory view."""
+        if refresh_view:
+            try:
+                self.ensure_avatar_visible(logger_callback=None)
+            except Exception:
+                pass
+            try:
+                self.open_first_inventory_bag(logger_callback=None)
+            except Exception:
+                pass
+            time.sleep(0.2)
+
+        count = self._get_visible_healing_item_count(timeout=timeout)
+        if count is not None:
+            return count
+
+        try:
+            self.ensure_avatar_visible(logger_callback=None)
+        except Exception:
+            pass
+        try:
+            self.open_first_inventory_bag(logger_callback=None)
+        except Exception:
+            pass
+        time.sleep(0.2)
+        return self._get_visible_healing_item_count(timeout=timeout)
+
+    def _wait_for_visible_healing_item_count(self, previous_count=None, timeout=1.5, refresh_view=False):
+        """Wait briefly for the visible refill pot count to stabilize after a drag."""
+        end = time.time() + timeout
+        last_count = None
+        while time.time() < end:
+            count = self._read_visible_healing_item_count(timeout=0.5, refresh_view=refresh_view)
+            if count is not None:
+                last_count = count
+                if previous_count is None or count != previous_count:
+                    return count
+            time.sleep(0.12)
+        return last_count
+
+    def _publish_refill_pot_count(self, count, count_update_callback=None):
+        if count_update_callback is None or count is None:
+            return
+        try:
+            count_update_callback(count)
+        except Exception:
+            pass
+
+    def find_shop_refill_items(self, timeout=5):
+        """Find visible refill items in the shop tab."""
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                items = self.driver.find_elements(
+                    By.XPATH,
+                    "//div[@id='shop' and contains(@class,'ui-droppable-grid')]//div[contains(@class,'item-i') and @data-content-type='64']",
+                )
+                visible = [item for item in items if item.is_displayed()]
+                if visible:
+                    return visible
+            except Exception:
+                pass
+            time.sleep(0.3)
+        return []
+
+    def drag_shop_item_to_inventory(self, item_element, logger_callback=None):
+        """Drag a shop item into the first free slot in the inventory grid."""
+        before_count = None
+        released_to_slot = False
+        item_disappeared = lambda: False
+        try:
+            from selenium.webdriver.common.action_chains import ActionChains
+
+            before_count = self._read_visible_healing_item_count(timeout=1, refresh_view=True)
+            if logger_callback:
+                logger_callback(f"Refill pot drag starting; visible count before drag: {before_count}")
+            tried_slot_keys = set()
+            attempts = 2
+            saw_dropareas = False
+            blocked = False
+
+            def item_disappeared():
+                try:
+                    return (not item_element.is_displayed()) or (item_element.get_attribute("data-item-id") is None)
+                except StaleElementReferenceException:
+                    return True
+                except Exception:
+                    return True
+
+            for attempt in range(attempts):
+                if logger_callback:
+                    logger_callback(f"Refill pot drag attempt {attempt + 1}/{attempts}")
+
+                # Start a real drag motion so the game reveals valid drop areas.
+                drag_start = ActionChains(self.driver)
+                drag_start.click_and_hold(item_element)
+                drag_start.move_by_offset(10, 10)
+                drag_start.pause(0.1)
+                drag_start.perform()
+                time.sleep(0.25)
+
+                grid, candidates = self._get_visible_inventory_dropareas(
+                    timeout=2,
+                    limit=10,
+                    logger_callback=logger_callback,
+                    log_missing=False,
+                )
+                if logger_callback:
+                    logger_callback(
+                        f"Refill pot drag attempt {attempt + 1}/{attempts}: revealed {len(candidates)} dropareas"
+                    )
+                if not candidates:
+                    try:
+                        ActionChains(self.driver).release().perform()
+                    except Exception:
+                        pass
+                    if logger_callback:
+                        logger_callback(
+                            f"Refill pot drag attempt {attempt + 1}/{attempts}: no dropareas available after reveal"
+                        )
+                    if attempt == attempts - 1:
+                        blocked = True
+                        break
+                    continue
+                saw_dropareas = True
+
+                target_slot = None
+                for slot in candidates:
+                    slot_key = self._get_droparea_key(slot)
+                    if slot_key and slot_key in tried_slot_keys:
+                        continue
+                    target_slot = slot
+                    if slot_key:
+                        tried_slot_keys.add(slot_key)
+                    break
+
+                if target_slot is None:
+                    if logger_callback:
+                        logger_callback(
+                            f"Refill pot drag attempt {attempt + 1}/{attempts}: all revealed dropareas were already tried"
+                        )
+                    try:
+                        ActionChains(self.driver).release().perform()
+                    except Exception:
+                        pass
+                    if attempt == attempts - 1:
+                        blocked = True
+                        break
+                    continue
+
+                actions = ActionChains(self.driver)
+                actions.move_to_element(target_slot)
+                actions.pause(0.15)
+                actions.release()
+                actions.perform()
+                released_to_slot = True
+                if logger_callback:
+                    logger_callback(
+                        f"Refill pot drag attempt {attempt + 1}/{attempts}: released onto slot {self._get_droparea_key(target_slot) or 'unknown'}"
+                    )
+                time.sleep(0.25)
+
+                after_count = self._wait_for_visible_healing_item_count(
+                    previous_count=before_count,
+                    timeout=1.5,
+                    refresh_view=True,
+                )
+                if logger_callback:
+                    logger_callback(
+                        f"Refill pot drag attempt {attempt + 1}/{attempts}: count after drag check is {after_count}"
+                    )
+                if after_count is not None and before_count is not None and after_count > before_count:
+                    if logger_callback:
+                        logger_callback("Dragged shop item into empty slot")
+                    return "success"
+
+                if item_disappeared():
+                    if logger_callback:
+                        logger_callback(
+                            "Shop item disappeared after drag; counting this as a purchased refill pot"
+                        )
+                    return "inferred_success"
+
+                try:
+                    ActionChains(self.driver).release().perform()
+                except Exception:
+                    pass
+
+            final_count = self._read_visible_healing_item_count(timeout=1, refresh_view=True)
+            if logger_callback:
+                logger_callback(
+                    f"Refill pot drag finished; before={before_count}, final visible count={final_count}, released={released_to_slot}, blocked={blocked}"
+                )
+            if final_count is not None and before_count is not None and final_count > before_count:
+                if logger_callback:
+                    logger_callback("Dragged shop item into empty slot")
+                return "success"
+
+            if logger_callback and not saw_dropareas:
+                logger_callback("No visible inventory dropareas found")
+
+            if blocked or not saw_dropareas:
+                return "blocked"
+
+            if logger_callback:
+                logger_callback("Dragged shop item into inventory, but count did not change")
+            return "attempted" if released_to_slot else "failed"
+        except Exception as e:
+            after_count = self._wait_for_visible_healing_item_count(
+                previous_count=before_count,
+                timeout=1.5,
+                refresh_view=True,
+            )
+            if logger_callback:
+                logger_callback(
+                    f"Refill pot drag exception state; before={before_count}, after={after_count}, released={released_to_slot}"
+                )
+            if after_count is not None and before_count is not None and after_count > before_count:
+                if logger_callback:
+                    logger_callback("Dragged shop item into empty slot")
+                return "success"
+            if released_to_slot and item_disappeared():
+                if logger_callback:
+                    logger_callback(
+                        "Shop item disappeared during drag exception handling; counting this as a purchased refill pot"
+                    )
+                return "inferred_success"
+            if logger_callback:
+                logger_callback(f"Error dragging shop item into inventory: {e}")
+            return "attempted" if released_to_slot else "failed"
+
+    def buy_refill_pots(self, min_item_count=10, logger_callback=None, count_update_callback=None):
+        """Buy refill pots from General goods until inventory count reaches the target."""
+        try:
+            if not self.ensure_game_tab():
+                if logger_callback:
+                    logger_callback("Could not find game tab for refill pot purchase")
+                return False
+
+            if not self.open_city_map(logger_callback=logger_callback):
+                return False
+
+            if not self.open_general_goods(logger_callback=logger_callback):
+                return False
+
+            if not self.ensure_avatar_visible(logger_callback=logger_callback):
+                return False
+
+            if not self.open_first_inventory_bag(logger_callback=logger_callback):
+                return False
+
+            if not self.open_shop_tab_two(logger_callback=logger_callback):
+                return False
+
+            current_count = self._read_visible_healing_item_count(timeout=2, refresh_view=True)
+            if current_count is None:
+                if logger_callback:
+                    logger_callback("Could not read current refill pot count")
+                return False
+            self._publish_refill_pot_count(current_count, count_update_callback)
+
+            if current_count >= min_item_count:
+                if logger_callback:
+                    logger_callback(f"Refill pots already at {current_count}, no purchase needed")
+                return True
+
+            items = self.find_shop_refill_items()
+            if not items:
+                if logger_callback:
+                    logger_callback("No refill pots found in shop")
+                return False
+
+            if logger_callback:
+                logger_callback(f"Refill pots below {min_item_count} ({current_count}), buying from shop...")
+
+            loop_index = 0
+            while current_count < min_item_count:
+                loop_index += 1
+                items = self.find_shop_refill_items(timeout=2)
+                if logger_callback:
+                    logger_callback(
+                        f"Refill pot buy cycle {loop_index}: target={min_item_count}, current={current_count}, shop items visible={len(items)}"
+                    )
+                if not items:
+                    if logger_callback:
+                        logger_callback("No refill pots left in shop")
+                    break
+
+                item = items[0]
+                try:
+                    if not item.is_displayed():
+                        if logger_callback:
+                            logger_callback("Stopped buying refill pots because shop item is no longer visible")
+                        break
+                except StaleElementReferenceException:
+                    if logger_callback:
+                        logger_callback("Stopped buying refill pots because shop item became stale")
+                    break
+
+                previous_count = current_count
+                move_result = self.drag_shop_item_to_inventory(item, logger_callback=logger_callback)
+                current_count = self._wait_for_visible_healing_item_count(
+                    previous_count=previous_count,
+                    timeout=2.5,
+                    refresh_view=True,
+                )
+                if current_count is None:
+                    current_count = self._read_visible_healing_item_count(timeout=1.5, refresh_view=True)
+                if current_count is None:
+                    current_count = previous_count
+                if current_count <= previous_count and move_result == "inferred_success":
+                    current_count = previous_count + 1
+                    if logger_callback:
+                        logger_callback(
+                            f"Refill pot buy cycle {loop_index}: inferred count advanced to {current_count} from shop item removal"
+                        )
+                self._publish_refill_pot_count(current_count, count_update_callback)
+                if logger_callback:
+                    logger_callback(
+                        f"Refill pot buy cycle {loop_index} result: move_result={move_result}, previous={previous_count}, current={current_count}"
+                    )
+
+                if current_count >= min_item_count:
+                    if logger_callback:
+                        logger_callback(f"Refill pot count updated to {current_count}")
+                    break
+
+                if current_count > previous_count:
+                    if logger_callback:
+                        logger_callback(f"Refill pot count updated to {current_count}")
+                    continue
+
+                if move_result == "blocked":
+                    if logger_callback:
+                        logger_callback("Stopped buying refill pots because inventory has no usable empty slot")
+                    break
+
+                if logger_callback:
+                    logger_callback("Stopped buying refill pots because drag did not increase refill pot count")
+                break
+
+            if not self.navigate_to_overview(logger_callback=logger_callback):
+                if logger_callback:
+                    logger_callback("Could not return to overview after refill pot purchase")
+
+            final_count = self.get_healing_item_count(logger_callback=logger_callback)
+            self._publish_refill_pot_count(final_count, count_update_callback)
+            if logger_callback:
+                logger_callback(
+                    f"Refill pot purchase final recount on overview: {final_count} / target {min_item_count}"
+                )
+            if final_count is not None and final_count >= min_item_count:
+                if logger_callback:
+                    logger_callback(f"Refill pot purchase complete: {final_count}")
+                return True
+
+            if logger_callback:
+                logger_callback(
+                    f"Refill pot purchase ended at {final_count if final_count is not None else 'unknown'}"
+                )
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error buying refill pots: {e}")
+            return False
+
+    def attempt_buy_refill_pots_if_needed(self, min_item_count=10, logger_callback=None, count_update_callback=None):
+        """Buy refill pots only when the current inventory count is below threshold."""
+        try:
+            if not self.ensure_game_tab():
+                if logger_callback:
+                    logger_callback("Could not find game tab for refill pot purchase")
+                return
+
+            current_count = self.get_healing_item_count(logger_callback=logger_callback)
+            if current_count is None:
+                if logger_callback:
+                    logger_callback("Could not read refill pot count")
+                return
+            self._publish_refill_pot_count(current_count, count_update_callback)
+
+            if current_count >= min_item_count:
+                if logger_callback:
+                    logger_callback(f"Refill pots OK ({current_count}), purchase not needed")
+                return
+
+            if logger_callback:
+                logger_callback(f"Refill pots below {min_item_count} ({current_count}), buying...")
+
+            success = self.buy_refill_pots(
+                min_item_count=min_item_count,
+                logger_callback=logger_callback,
+                count_update_callback=count_update_callback,
+            )
+            if logger_callback:
+                logger_callback("Refill pot buy: successful" if success else "Refill pot buy: failed")
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Refill pot buy: failed ({e})")
+
     def _open_country_map_location(self, loc, label, page_name, expected_url_keywords, expected_elements, logger_callback=None):
         try:
             if not self.ensure_game_tab():
