@@ -354,7 +354,7 @@ class GladiatusGUI:
             textvariable=self.dungeon_location_var,
             values=self.DUNGEON_LOCATIONS,
             state="readonly",
-            width=12,
+            width=24,
         )
         self.dungeon_combo.grid(row=0, column=1, sticky="w")
 
