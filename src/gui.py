@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon toggle hizasi duzeltildi, Dungeon tekrar Attacks altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon toggle hizasi duzeltildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -280,10 +280,9 @@ class GladiatusGUI:
         locations_box = ttk.Frame(attacks_box, style="Panel.TFrame")
         locations_box.grid(row=3, column=0, columnspan=2, sticky="ew")
         locations_box.columnconfigure(0, weight=1)
-        locations_box.columnconfigure(1, weight=1)
 
         expedition_section = ttk.Frame(locations_box, style="Panel.TFrame")
-        expedition_section.grid(row=0, column=0, sticky="nw", padx=(0, 12), pady=(0, 0))
+        expedition_section.grid(row=0, column=0, sticky="ew", pady=(0, 0))
         expedition_section.columnconfigure(1, weight=1)
         ttk.Label(expedition_section, text="Expedition Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
@@ -344,7 +343,7 @@ class GladiatusGUI:
             ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
 
         dungeon_section = ttk.Frame(locations_box, style="Panel.TFrame")
-        dungeon_section.grid(row=0, column=1, sticky="nw", padx=(12, 0), pady=(0, 0))
+        dungeon_section.grid(row=1, column=0, sticky="ew", pady=(18, 0))
         dungeon_section.columnconfigure(1, weight=1)
         ttk.Label(dungeon_section, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
