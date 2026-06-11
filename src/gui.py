@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; login alanlari gorunur hale getirildi, Play/Stop buton genislikleri duzeltildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -165,9 +165,9 @@ class GladiatusGUI:
         left = ttk.Frame(shell, style="App.TFrame")
         left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
         left.columnconfigure(0, weight=1)
-        left.rowconfigure(0, weight=1)
-
-        left.columnconfigure(0, weight=1)
+        left.rowconfigure(0, weight=0)
+        left.rowconfigure(1, weight=0)
+        left.rowconfigure(2, weight=0)
         left.rowconfigure(3, weight=1)
 
         right = ttk.Frame(shell, style="App.TFrame")
@@ -189,7 +189,7 @@ class GladiatusGUI:
         panel.columnconfigure(1, weight=1)
 
         ttk.Label(panel, text="Hesap", style="CardTitle.TLabel").grid(row=0, column=0, columnspan=2, sticky="w")
-        ttk.Label(panel, text="Giristen sonra ayni oturum uzerinden mekanikler doner.", style="Muted.TLabel").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 12))
+        ttk.Label(panel, text="Giristen sonra ayni oturum uzerinden mekanikler doner.", style="Muted.TLabel").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 10))
 
         form_row = ttk.Frame(panel, style="Panel.TFrame")
         form_row.grid(row=2, column=0, columnspan=2, sticky="ew")
@@ -240,7 +240,7 @@ class GladiatusGUI:
         buttons_row = ttk.Frame(panel, style="Panel.TFrame")
         buttons_row.grid(row=4, column=0, columnspan=2, sticky="w", pady=(14, 0))
 
-        self.login_btn = ttk.Button(buttons_row, text="Login", style="Primary.TButton", command=self.start_login, width=16)
+        self.login_btn = ttk.Button(buttons_row, text="Login", style="Primary.TButton", command=self.start_login, width=12)
         self.login_btn.grid(row=0, column=0, sticky="w")
 
         self.captcha_btn = ttk.Button(
@@ -249,7 +249,7 @@ class GladiatusGUI:
             style="Danger.TButton",
             command=self.captcha_solved_callback,
             state="disabled",
-            width=24,
+            width=18,
         )
         self.captcha_btn.grid(row=0, column=1, sticky="w", padx=(12, 0))
 
