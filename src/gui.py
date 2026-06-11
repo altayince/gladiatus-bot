@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, log kutusunun border/padding hizasi duzeltildi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, Neler degisti kutusu Activity Log stiliyle ust baslikli hale getirildi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -661,28 +661,27 @@ class GladiatusGUI:
         self.loop_value.grid(row=3, column=1, sticky="e")
 
     def _build_notes_panel(self, parent):
-        panel = ttk.Frame(parent, style="PanelAlt.TFrame", padding=16)
-        panel.grid(row=1, column=0, sticky="ew", padx=(12, 0))
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel.grid(row=1, column=0, sticky="ew")
         panel.columnconfigure(0, weight=1)
 
-        tk.Label(panel, text="Neler degisti?", bg=self.PANEL_ALT, fg=self.TEXT, font=("Segoe UI Semibold", 12)).grid(
-            row=0, column=0, sticky="w"
-        )
+        ttk.Label(panel, text="Neler degisti?", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
 
         self.change_notes_text = tk.Text(
             panel,
             height=12,
             wrap="word",
-            bg=self.PANEL_ALT,
-            fg=self.MUTED,
+            bg="#08111f",
+            fg="#dbeafe",
+            insertbackground="#dbeafe",
             relief="flat",
-            highlightthickness=0,
             borderwidth=0,
+            highlightthickness=0,
             padx=0,
-            pady=0,
+            pady=10,
             font=("Segoe UI", 10),
         )
-        self.change_notes_text.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        self.change_notes_text.grid(row=1, column=0, sticky="ew", pady=(12, 0))
         self.change_notes_text.configure(state="disabled")
         self._render_change_notes()
 
