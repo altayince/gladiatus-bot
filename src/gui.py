@@ -155,19 +155,8 @@ class ThemedDropdown(tk.Frame):
         self.popup = None
         self.popup_inner = None
 
-        self.face = tk.Frame(self, bg=panel_color, padx=12, pady=10, cursor="hand2")
+        self.face = tk.Frame(self, bg=panel_color, padx=0, pady=0, cursor="hand2")
         self.face.pack(fill="both", expand=True, padx=1, pady=1)
-        self.face.columnconfigure(0, weight=1)
-
-        self.eyebrow = tk.Label(
-            self.face,
-            text="SELECT",
-            bg=panel_color,
-            fg=muted_color,
-            font=("Bahnschrift SemiBold", 8),
-            anchor="w",
-        )
-        self.eyebrow.grid(row=0, column=0, sticky="w")
 
         self.value_label = tk.Label(
             self.face,
@@ -177,26 +166,25 @@ class ThemedDropdown(tk.Frame):
             font=("Segoe UI Semibold", 10),
             anchor="w",
         )
-        self.value_label.grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        self.value_label.place(x=14, rely=0.5, anchor="w")
 
         self.chevron = tk.Label(
             self.face,
             text="v",
             bg=panel_color,
             fg=accent_color,
-            font=("Segoe UI Semibold", 10),
+            font=("Segoe UI Semibold", 11),
             cursor="hand2",
         )
-        self.chevron.grid(row=0, column=1, rowspan=2, sticky="e", padx=(14, 0))
+        self.chevron.place(relx=1.0, x=-14, rely=0.5, anchor="e")
 
         self.face.configure(width=width - 2, height=self.height - 2)
-        self.face.grid_propagate(False)
         self.face.pack_propagate(False)
         self.configure(width=width, height=self.height)
         self.pack_propagate(False)
         self.grid_propagate(False)
 
-        for widget in (self, self.face, self.eyebrow, self.value_label, self.chevron):
+        for widget in (self, self.face, self.value_label, self.chevron):
             widget.bind("<Button-1>", self._toggle_popup)
 
         self.variable.trace_add("write", self._sync_label)
