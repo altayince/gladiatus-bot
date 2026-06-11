@@ -621,7 +621,7 @@ class GladiatusGUI:
             insertbackground="#dbeafe",
             relief="flat",
             font=("Consolas", 10),
-            padx=10,
+            padx=0,
             pady=10,
         )
         self.log_text.grid(row=1, column=0, sticky="ew", pady=(12, 0))
