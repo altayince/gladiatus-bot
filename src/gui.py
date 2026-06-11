@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon tekrar Attacks altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon toggle hizasi duzeltildi, Dungeon tekrar Attacks altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -268,11 +268,10 @@ class GladiatusGUI:
         attack_toggles = ttk.Frame(attacks_box, style="Panel.TFrame")
         attack_toggles.grid(row=0, column=0, columnspan=2, sticky="ew")
         attack_toggles.columnconfigure(0, weight=1)
-        attack_toggles.columnconfigure(1, weight=1)
 
         ttk.Checkbutton(attack_toggles, text="Expedition", variable=self.expedition_var, style="Modern.TCheckbutton").grid(row=0, column=0, sticky="w", pady=4)
-        ttk.Checkbutton(attack_toggles, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="w", pady=4)
-        ttk.Checkbutton(attack_toggles, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Checkbutton(attack_toggles, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
+        ttk.Checkbutton(attack_toggles, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=2, column=0, sticky="w", pady=4)
 
         ttk.Separator(attacks_box, orient="horizontal").grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 12))
 
