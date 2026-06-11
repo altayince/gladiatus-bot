@@ -597,7 +597,7 @@ class GladiatusGUI:
 
     def _build_status_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
-        panel.grid(row=0, column=1, sticky="ne", padx=(16, 0), pady=(0, 0))
+        panel.grid(row=2, column=1, sticky="ne", padx=(16, 0), pady=(2, 0))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
 
