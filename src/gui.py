@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Attacks ve Recovery ayarlari tek sayfada toplandi ve Expedition/Dungeon kartlari hizalandi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Attacks, Locations ve Recovery bolumleri cizgilerle ayrildi ve Expedition/Dungeon kartlari hizalandi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -274,8 +274,17 @@ class GladiatusGUI:
         ttk.Checkbutton(attack_toggles, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="w", pady=4)
         ttk.Checkbutton(attack_toggles, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
 
-        expedition_section = ttk.Frame(attacks_box, style="Panel.TFrame")
-        expedition_section.grid(row=1, column=0, sticky="nw", padx=(0, 12), pady=(12, 0))
+        ttk.Separator(attacks_box, orient="horizontal").grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 12))
+
+        ttk.Label(attacks_box, text="Locations", style="CardTitle.TLabel").grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 8))
+
+        locations_box = ttk.Frame(attacks_box, style="Panel.TFrame")
+        locations_box.grid(row=3, column=0, columnspan=2, sticky="ew")
+        locations_box.columnconfigure(0, weight=1)
+        locations_box.columnconfigure(1, weight=1)
+
+        expedition_section = ttk.Frame(locations_box, style="Panel.TFrame")
+        expedition_section.grid(row=0, column=0, sticky="nw", padx=(0, 12), pady=(0, 0))
         expedition_section.columnconfigure(1, weight=1)
         ttk.Label(expedition_section, text="Expedition Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
@@ -335,8 +344,8 @@ class GladiatusGUI:
                 font=("Segoe UI", 9),
             ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
 
-        dungeon_section = ttk.Frame(attacks_box, style="Panel.TFrame")
-        dungeon_section.grid(row=1, column=1, sticky="nw", padx=(12, 0), pady=(12, 0))
+        dungeon_section = ttk.Frame(locations_box, style="Panel.TFrame")
+        dungeon_section.grid(row=0, column=1, sticky="nw", padx=(12, 0), pady=(0, 0))
         dungeon_section.columnconfigure(1, weight=1)
         ttk.Label(dungeon_section, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
@@ -379,10 +388,12 @@ class GladiatusGUI:
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
-        ttk.Label(panel, text="Recovery", style="CardTitle.TLabel").grid(row=3, column=0, sticky="w", pady=(16, 6))
+        ttk.Separator(panel, orient="horizontal").grid(row=3, column=0, columnspan=2, sticky="ew", pady=(16, 12))
+
+        ttk.Label(panel, text="Recovery", style="CardTitle.TLabel").grid(row=4, column=0, sticky="w", pady=(0, 6))
 
         recovery_box = ttk.Frame(panel, style="Panel.TFrame")
-        recovery_box.grid(row=4, column=0, columnspan=2, sticky="ew")
+        recovery_box.grid(row=5, column=0, columnspan=2, sticky="ew")
         recovery_box.columnconfigure(0, weight=1)
         recovery_box.columnconfigure(1, weight=0)
 
@@ -411,7 +422,7 @@ class GladiatusGUI:
         self.recovery_threshold_spinbox.pack(side="left", ipady=4)
 
         hp_row = ttk.Frame(panel, style="Panel.TFrame")
-        hp_row.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        hp_row.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(16, 0))
         hp_row.columnconfigure(1, weight=1)
 
         ttk.Checkbutton(
