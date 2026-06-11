@@ -248,7 +248,7 @@ class ThemedDropdown(tk.Frame):
             )
             row._dropdown_owner = self
             row.pack(fill="x")
-            row.bind("<Enter>", lambda _e, item=row: item.configure(bg="#162131", fg=self.accent_color))
+            row.bind("<Enter>", lambda _e, item=row: item.configure(bg="#4d2618", fg=self.accent_color))
             row.bind("<Leave>", lambda _e, item=row: item.configure(bg=self.panel_color, fg=self.text_color))
             row.bind("<Button-1>", lambda _e, value=option: self._select_option(value))
 
@@ -274,9 +274,9 @@ class ThemedDropdown(tk.Frame):
 class ThemedButton(tk.Frame):
     def __init__(self, parent, text, command, *, variant, width=180):
         palette = {
-            "primary": {"bg": "#59e3b2", "fg": "#06110c", "hover": "#93f0cf", "disabled_bg": "#3b4655", "disabled_fg": "#90a0b5"},
-            "secondary": {"bg": "#141a24", "fg": "#f5f7fb", "hover": "#1b2431", "disabled_bg": "#141a24", "disabled_fg": "#5f7087"},
-            "danger": {"bg": "#2a141d", "fg": "#ff9ab1", "hover": "#3a1824", "disabled_bg": "#1a1014", "disabled_fg": "#6e5861"},
+            "primary": {"bg": "#caa35f", "fg": "#24130b", "hover": "#e2c27a", "disabled_bg": "#6a5739", "disabled_fg": "#eedfc0"},
+            "secondary": {"bg": "#3a1b14", "fg": "#f3e3bf", "hover": "#4d2618", "disabled_bg": "#26150f", "disabled_fg": "#8f7654"},
+            "danger": {"bg": "#7b2d1f", "fg": "#f6e7c4", "hover": "#953624", "disabled_bg": "#341911", "disabled_fg": "#93725b"},
         }
         self.colors = palette[variant]
         super().__init__(parent, bg=self.colors["bg"], cursor="hand2")
@@ -356,11 +356,11 @@ class ThemedCheckbox(tk.Frame):
         border = self.accent_color if hover and self.state != "disabled" else self.muted_color
         fill = self.accent_color if self.variable.get() else self.bg_color
         if self.state == "disabled":
-            border = "#44505f"
-            fill = "#10151d" if not self.variable.get() else "#2a6352"
+            border = "#6f5938"
+            fill = "#23140d" if not self.variable.get() else "#736032"
         self.box.create_rectangle(1, 1, 15, 15, outline=border, fill=fill, width=1)
         if self.variable.get():
-            self.box.create_line(4, 8, 7, 11, 12, 4, fill="#06110c", width=2, capstyle=tk.ROUND, joinstyle=tk.ROUND)
+            self.box.create_line(4, 8, 7, 11, 12, 4, fill="#24130b", width=2, capstyle=tk.ROUND, joinstyle=tk.ROUND)
 
     def _sync(self, *_args):
         self._draw()
@@ -391,20 +391,20 @@ class ThemedCheckbox(tk.Frame):
 
 
 class GladiatusGUI:
-    BG = "#050608"
-    PANEL = "#0a0d12"
-    PANEL_ALT = "#10151d"
-    PANEL_SOFT = "#080b10"
-    INPUT_BG = "#06080c"
-    BORDER = "#18212d"
-    TEXT = "#f5f7fb"
-    MUTED = "#90a0b5"
-    ACCENT = "#59e3b2"
-    ACCENT_SOFT = "#93f0cf"
-    INFO = "#78a8ff"
-    SUCCESS = "#3ee0aa"
-    WARNING = "#ffb86b"
-    DANGER = "#ff6f91"
+    BG = "#1a100b"
+    PANEL = "#26150f"
+    PANEL_ALT = "#341b14"
+    PANEL_SOFT = "#1b100b"
+    INPUT_BG = "#120906"
+    BORDER = "#8b6a3d"
+    TEXT = "#f3e3bf"
+    MUTED = "#b79a71"
+    ACCENT = "#caa35f"
+    ACCENT_SOFT = "#e2c27a"
+    INFO = "#dcc491"
+    SUCCESS = "#9cab63"
+    WARNING = "#d48a42"
+    DANGER = "#9f3d2b"
 
     EXPEDITION_LOCATIONS = [
         ("Grimwood", "0"),
@@ -463,6 +463,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "28", "issue_title": "Retheme GUI to Gladiatus palette", "summary": "GUI'nin modern shell'i korunup palet Gladiatus'un pergament, oxblood, bronze ve sicak tas tonlarina cekildi; butonlar, dropdown'lar, scrollbar'lar ve durum vurgulari yeni renk ailesine uyarlandi."},
             {"issue_number": "25", "issue_title": "Premium GUI refresh", "summary": "Arayuz daha elit bir control suite hissi verecek sekilde yeniden tasarlandi; vitrin alani, durum kartlari, daha guclu tipografi ve premium panel hiyerarsisi eklendi."},
             {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, Neler degisti kutusu Activity Log stiliyle ust baslikli hale getirildi ve scroll eklendi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
@@ -529,23 +530,23 @@ class GladiatusGUI:
         style.configure(
             "Primary.TButton",
             background=self.ACCENT,
-            foreground="#07111b",
+            foreground="#24130b",
             borderwidth=0,
             focusthickness=0,
             font=("Segoe UI Semibold", 10),
             padding=(16, 10),
         )
-        style.map("Primary.TButton", background=[("active", self.ACCENT_SOFT), ("disabled", "#475569")], foreground=[("disabled", "#cbd5e1")])
+        style.map("Primary.TButton", background=[("active", self.ACCENT_SOFT), ("disabled", "#6a5739")], foreground=[("disabled", "#eedfc0")])
         style.configure(
             "Danger.TButton",
             background=self.DANGER,
-            foreground="white",
+            foreground=self.TEXT,
             borderwidth=0,
             focusthickness=0,
             font=("Segoe UI Semibold", 10),
             padding=(16, 10),
         )
-        style.map("Danger.TButton", background=[("active", "#f87171"), ("disabled", "#475569")], foreground=[("disabled", "#cbd5e1")])
+        style.map("Danger.TButton", background=[("active", "#b14f33"), ("disabled", "#47291f")], foreground=[("disabled", "#d4baa2")])
         style.configure(
             "Secondary.TButton",
             background=self.PANEL_ALT,
@@ -555,7 +556,7 @@ class GladiatusGUI:
             font=("Segoe UI Semibold", 10),
             padding=(16, 10),
         )
-        style.map("Secondary.TButton", background=[("active", "#1c2947"), ("disabled", "#475569")], foreground=[("disabled", "#94a3b8")])
+        style.map("Secondary.TButton", background=[("active", "#4d2618"), ("disabled", "#47291f")], foreground=[("disabled", "#a48862")])
 
     def _build_layout(self):
         self.root.columnconfigure(0, weight=1)
@@ -584,7 +585,7 @@ class GladiatusGUI:
 
         brand = tk.Frame(top_rail, bg=self.PANEL_ALT)
         brand.grid(row=0, column=0, sticky="w")
-        gla_mark = tk.Label(brand, text="GLA", bg=self.ACCENT, fg="#06110c", font=("Bahnschrift SemiBold", 10), padx=9, pady=5)
+        gla_mark = tk.Label(brand, text="GLA", bg=self.ACCENT, fg="#24130b", font=("Bahnschrift SemiBold", 10), padx=9, pady=5)
         gla_mark.grid(row=0, column=0, sticky="w")
         title_label = tk.Label(brand, text="Gladiatus Command Suite", bg=self.PANEL_ALT, fg=self.TEXT, font=("Bahnschrift SemiBold", 12))
         title_label.grid(row=0, column=1, sticky="w", padx=(12, 0))
@@ -663,7 +664,7 @@ class GladiatusGUI:
             body,
             canvas.yview,
             bg_color=self.BG,
-            track_color="#10161e",
+            track_color="#2c1a11",
             thumb_color=self.ACCENT,
             thumb_hover_color=self.ACCENT_SOFT,
         )
@@ -779,8 +780,8 @@ class GladiatusGUI:
     def _style_text_panel(self, widget):
         widget.configure(
             bg=self.PANEL_SOFT,
-            fg="#dbe7ff",
-            insertbackground="#dbe7ff",
+            fg=self.TEXT,
+            insertbackground=self.ACCENT_SOFT,
             relief="flat",
             borderwidth=0,
             highlightthickness=0,
@@ -833,7 +834,7 @@ class GladiatusGUI:
             hover_fg = self.TEXT
         else:
             command = self._on_close
-            hover_bg = "#35151d"
+            hover_bg = "#5a2419"
             hover_fg = self.TEXT
 
         for widget in (frame, canvas):
@@ -1579,7 +1580,7 @@ class GladiatusGUI:
                 fg=self.TEXT,
                 activebackground=self.PANEL,
                 activeforeground=self.TEXT,
-                selectcolor="#0b1220",
+                selectcolor=self.INPUT_BG,
                 font=("Segoe UI", 10),
             ).grid(row=0, column=0, sticky="w")
             tk.Label(
@@ -1632,7 +1633,7 @@ class GladiatusGUI:
                 fg=self.TEXT,
                 activebackground=self.PANEL,
                 activeforeground=self.TEXT,
-                selectcolor="#0b1220",
+                selectcolor=self.INPUT_BG,
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
@@ -1658,7 +1659,7 @@ class GladiatusGUI:
             panel,
             self.log_text.yview,
             bg_color=self.PANEL,
-            track_color="#10161e",
+            track_color="#2c1a11",
             thumb_color=self.ACCENT,
             thumb_hover_color=self.ACCENT_SOFT,
         )
@@ -1721,7 +1722,7 @@ class GladiatusGUI:
             panel,
             self.change_notes_text.yview,
             bg_color=self.PANEL,
-            track_color="#10161e",
+            track_color="#2c1a11",
             thumb_color=self.ACCENT,
             thumb_hover_color=self.ACCENT_SOFT,
         )
