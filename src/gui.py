@@ -66,7 +66,8 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery tab eklendi; refill potlar threshold altinda shop'tan otomatik aliniyor ve her alimdan sonra sayi yeniden dogrulanip UI guncelleniyor."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Attacks ve Recovery ayarlari tek sayfada toplandi."},
+            {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
             "HP refill sayaci ana ekranda gorunuyor.",
@@ -166,37 +167,17 @@ class GladiatusGUI:
         left.columnconfigure(0, weight=1)
         left.rowconfigure(0, weight=1)
 
-        notebook = ttk.Notebook(left)
-        notebook.grid(row=0, column=0, sticky="nsew")
-
-        main_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
-        expedition_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
-        dungeon_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
-        recovery_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
-        notebook.add(main_tab, text="Main")
-        notebook.add(expedition_tab, text="Expedition")
-        notebook.add(dungeon_tab, text="Dungeon")
-        notebook.add(recovery_tab, text="Recovery")
-        main_tab.columnconfigure(0, weight=1)
-        main_tab.rowconfigure(3, weight=1)
-        expedition_tab.columnconfigure(0, weight=1)
-        expedition_tab.rowconfigure(0, weight=1)
-        dungeon_tab.columnconfigure(0, weight=1)
-        dungeon_tab.rowconfigure(0, weight=1)
-        recovery_tab.columnconfigure(0, weight=1)
-        recovery_tab.rowconfigure(0, weight=1)
+        left.columnconfigure(0, weight=1)
+        left.rowconfigure(3, weight=1)
 
         right = ttk.Frame(shell, style="App.TFrame")
         right.grid(row=1, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
 
-        self._build_credentials_panel(main_tab)
-        self._build_controls_panel(main_tab)
-        self._build_mechanics_panel(main_tab)
-        self._build_log_panel(main_tab)
-        self._build_expedition_panel(expedition_tab)
-        self._build_dungeon_panel(dungeon_tab)
-        self._build_recovery_panel(recovery_tab)
+        self._build_credentials_panel(left)
+        self._build_controls_panel(left)
+        self._build_mechanics_panel(left)
+        self._build_log_panel(left)
 
         self._build_status_panel(right)
         self._build_notes_panel(right)
@@ -272,16 +253,179 @@ class GladiatusGUI:
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
 
-        ttk.Checkbutton(panel, text="Expedition", variable=self.expedition_var, style="Modern.TCheckbutton").grid(row=0, column=0, sticky="w", pady=4)
-        ttk.Checkbutton(panel, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="w", pady=4)
-        ttk.Checkbutton(panel, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
-        ttk.Checkbutton(panel, text="Refill HP", variable=self.refill_hp_var, style="Modern.TCheckbutton").grid(row=1, column=1, sticky="w", pady=4)
+        ttk.Label(panel, text="Attacks", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            panel,
+            text="Expedition, Dungeon ve Circus Turma ayarlari burada toplanir.",
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+
+        attacks_box = ttk.Frame(panel, style="Panel.TFrame")
+        attacks_box.grid(row=2, column=0, columnspan=2, sticky="ew")
+        attacks_box.columnconfigure(0, weight=1)
+        attacks_box.columnconfigure(1, weight=1)
+
+        attack_toggles = ttk.Frame(attacks_box, style="Panel.TFrame")
+        attack_toggles.grid(row=0, column=0, columnspan=2, sticky="ew")
+        attack_toggles.columnconfigure(0, weight=1)
+        attack_toggles.columnconfigure(1, weight=1)
+
+        ttk.Checkbutton(attack_toggles, text="Expedition", variable=self.expedition_var, style="Modern.TCheckbutton").grid(row=0, column=0, sticky="w", pady=4)
+        ttk.Checkbutton(attack_toggles, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="w", pady=4)
+        ttk.Checkbutton(attack_toggles, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
+
+        expedition_section = ttk.Frame(attacks_box, style="Panel.TFrame")
+        expedition_section.grid(row=1, column=0, sticky="ew", padx=(0, 12), pady=(12, 0))
+        expedition_section.columnconfigure(1, weight=1)
+        ttk.Label(expedition_section, text="Expedition Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            expedition_section,
+            text="Country map uzerinden lokasyon secilir, sonra mob hedefi belirlenir.",
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+
+        expedition_location_row = ttk.Frame(expedition_section, style="Panel.TFrame")
+        expedition_location_row.grid(row=2, column=0, sticky="ew", pady=(0, 14))
+        expedition_location_row.columnconfigure(1, weight=1)
+        tk.Label(expedition_location_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        self.location_combo = ttk.Combobox(
+            expedition_location_row,
+            textvariable=self.expedition_location_var,
+            values=[label for label, _ in self.EXPEDITION_LOCATIONS],
+            state="readonly",
+            width=24,
+        )
+        self.location_combo.grid(row=0, column=1, sticky="w")
+
+        choice_box = ttk.Frame(expedition_section, style="Panel.TFrame")
+        choice_box.grid(row=3, column=0, sticky="ew")
+        choice_box.columnconfigure(0, weight=1)
+
+        options = [
+            ("1", "1. mob", "Ilk kutudaki hedef"),
+            ("2", "2. mob", "Ikinci kutudaki hedef"),
+            ("3", "3. mob", "Ucuncu kutudaki hedef"),
+            ("4", "4. mob", "Dorduncu kutudaki hedef"),
+        ]
+
+        for idx, (value, label, description) in enumerate(options):
+            row = idx // 2
+            col = idx % 2
+            option_frame = ttk.Frame(choice_box, style="Panel.TFrame")
+            option_frame.grid(row=row, column=col, sticky="ew", padx=(0, 10 if col == 0 else 0), pady=(0, 10))
+            option_frame.columnconfigure(1, weight=1)
+
+            tk.Radiobutton(
+                option_frame,
+                text=label,
+                value=value,
+                variable=self.expedition_target_var,
+                bg=self.PANEL,
+                fg=self.TEXT,
+                activebackground=self.PANEL,
+                activeforeground=self.TEXT,
+                selectcolor="#0b1220",
+                font=("Segoe UI", 10),
+            ).grid(row=0, column=0, sticky="w")
+            tk.Label(
+                option_frame,
+                text=description,
+                bg=self.PANEL,
+                fg=self.MUTED,
+                font=("Segoe UI", 9),
+            ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
+
+        dungeon_section = ttk.Frame(attacks_box, style="Panel.TFrame")
+        dungeon_section.grid(row=1, column=1, sticky="ew", padx=(12, 0), pady=(12, 0))
+        dungeon_section.columnconfigure(1, weight=1)
+        ttk.Label(dungeon_section, text="Dungeon Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            dungeon_section,
+            text="Dungeon, expedition ile ayni country map lokasyonlari kullanir.",
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+
+        dungeon_row = ttk.Frame(dungeon_section, style="Panel.TFrame")
+        dungeon_row.grid(row=2, column=0, sticky="ew")
+        dungeon_row.columnconfigure(1, weight=1)
+        tk.Label(dungeon_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        self.dungeon_combo = ttk.Combobox(
+            dungeon_row,
+            textvariable=self.dungeon_location_var,
+            values=self.DUNGEON_LOCATIONS,
+            state="readonly",
+            width=12,
+        )
+        self.dungeon_combo.grid(row=0, column=1, sticky="w")
+
+        difficulty_row = ttk.Frame(dungeon_section, style="Panel.TFrame")
+        difficulty_row.grid(row=3, column=0, sticky="ew", pady=(14, 0))
+        difficulty_row.columnconfigure(1, weight=1)
+        tk.Label(difficulty_row, text="Difficulty", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+
+        difficulty_box = ttk.Frame(difficulty_row, style="Panel.TFrame")
+        difficulty_box.grid(row=0, column=1, sticky="w")
+        for idx, label in enumerate(self.DUNGEON_DIFFICULTIES):
+            tk.Radiobutton(
+                difficulty_box,
+                text=label,
+                value=label,
+                variable=self.dungeon_difficulty_var,
+                bg=self.PANEL,
+                fg=self.TEXT,
+                activebackground=self.PANEL,
+                activeforeground=self.TEXT,
+                selectcolor="#0b1220",
+                font=("Segoe UI", 10),
+            ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
+
+        ttk.Label(panel, text="Recovery", style="CardTitle.TLabel").grid(row=3, column=0, sticky="w", pady=(16, 6))
+
+        recovery_box = ttk.Frame(panel, style="Panel.TFrame")
+        recovery_box.grid(row=4, column=0, columnspan=2, sticky="ew")
+        recovery_box.columnconfigure(0, weight=1)
+        recovery_box.columnconfigure(1, weight=0)
+
+        ttk.Checkbutton(
+            recovery_box,
+            text="Buy refill pots when refill pots are under",
+            variable=self.recovery_buy_refill_var,
+            style="Modern.TCheckbutton",
+        ).grid(row=0, column=0, sticky="w", pady=4)
+
+        threshold_box = ttk.Frame(recovery_box, style="Panel.TFrame")
+        threshold_box.grid(row=0, column=1, sticky="e")
+        tk.Label(threshold_box, text="Threshold", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left", padx=(0, 10))
+        self.recovery_threshold_spinbox = tk.Spinbox(
+            threshold_box,
+            from_=0,
+            to=999,
+            width=6,
+            textvariable=self.recovery_threshold_var,
+            bg="#0b1220",
+            fg=self.TEXT,
+            insertbackground=self.TEXT,
+            relief="flat",
+            font=("Segoe UI", 11),
+        )
+        self.recovery_threshold_spinbox.pack(side="left", ipady=4)
 
         hp_row = ttk.Frame(panel, style="Panel.TFrame")
-        hp_row.grid(row=2, column=0, columnspan=2, sticky="w", pady=(12, 0))
-        tk.Label(hp_row, text="Min HP %", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left")
-        self.hp_spinbox = tk.Spinbox(
+        hp_row.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        hp_row.columnconfigure(1, weight=1)
+
+        ttk.Checkbutton(
             hp_row,
+            text="Refill HP",
+            variable=self.refill_hp_var,
+            style="Modern.TCheckbutton",
+        ).grid(row=0, column=0, sticky="w", pady=4)
+
+        hp_box = ttk.Frame(hp_row, style="Panel.TFrame")
+        hp_box.grid(row=0, column=1, sticky="e")
+        tk.Label(hp_box, text="Min HP %", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left", padx=(0, 10))
+        self.hp_spinbox = tk.Spinbox(
+            hp_box,
             from_=1,
             to=99,
             width=5,
@@ -292,7 +436,7 @@ class GladiatusGUI:
             relief="flat",
             font=("Segoe UI", 11),
         )
-        self.hp_spinbox.pack(side="left", padx=(10, 0), ipady=4)
+        self.hp_spinbox.pack(side="left", ipady=4)
 
     def _build_expedition_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
@@ -402,47 +546,6 @@ class GladiatusGUI:
                 selectcolor="#0b1220",
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
-
-    def _build_recovery_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
-        panel.grid(row=0, column=0, sticky="ew")
-        panel.columnconfigure(0, weight=1)
-
-        ttk.Label(panel, text="Recovery", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
-        ttk.Label(
-            panel,
-            text="Refill pot sayisi dusunce shop'a gidip stoğu tamamlar.",
-            style="Muted.TLabel",
-        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
-
-        recovery_row = ttk.Frame(panel, style="Panel.TFrame")
-        recovery_row.grid(row=2, column=0, sticky="ew")
-        recovery_row.columnconfigure(0, weight=1)
-        recovery_row.columnconfigure(1, weight=0)
-
-        ttk.Checkbutton(
-            recovery_row,
-            text="Buy refill pots when refill pots are under",
-            variable=self.recovery_buy_refill_var,
-            style="Modern.TCheckbutton",
-        ).grid(row=0, column=0, sticky="w", pady=4)
-
-        threshold_box = ttk.Frame(recovery_row, style="Panel.TFrame")
-        threshold_box.grid(row=0, column=1, sticky="e")
-        tk.Label(threshold_box, text="Threshold", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left", padx=(0, 10))
-        self.recovery_threshold_spinbox = tk.Spinbox(
-            threshold_box,
-            from_=0,
-            to=999,
-            width=6,
-            textvariable=self.recovery_threshold_var,
-            bg="#0b1220",
-            fg=self.TEXT,
-            insertbackground=self.TEXT,
-            relief="flat",
-            font=("Segoe UI", 11),
-        )
-        self.recovery_threshold_spinbox.pack(side="left", ipady=4)
 
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
