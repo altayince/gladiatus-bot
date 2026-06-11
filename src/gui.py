@@ -436,6 +436,10 @@ class GladiatusGUI:
         self._drag_window_offset = None
         self._drag_started_maximized = False
         self._top_snap_armed = False
+        self._background_asset_path = Path(__file__).resolve().parent.parent / "assets" / "gladiatus_arena_bg.png"
+        self._background_image = None
+        self._root_background_label = None
+        self._body_background_image_id = None
 
         self.bot = None
         self.login_thread = None
@@ -480,6 +484,7 @@ class GladiatusGUI:
         self._registered_dropdowns = []
 
         self._settings_suspended = True
+        self._load_background_art()
         self._configure_styles()
         self._build_layout()
         self.root._close_all_dropdowns = self._close_all_dropdowns
@@ -561,6 +566,7 @@ class GladiatusGUI:
     def _build_layout(self):
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
+        self._mount_root_background()
 
         shell = ttk.Frame(self.root, style="App.TFrame", padding=0)
         shell.grid(sticky="nsew")
@@ -660,6 +666,9 @@ class GladiatusGUI:
 
         canvas = tk.Canvas(body, bg=self.BG, highlightthickness=0, bd=0)
         canvas.grid(row=0, column=0, sticky="nsew")
+        if self._background_image:
+            self._body_background_image_id = canvas.create_image(0, 0, image=self._background_image, anchor="n")
+            canvas.tag_lower(self._body_background_image_id)
         body_scroll = ModernScrollbar(
             body,
             canvas.yview,
@@ -675,10 +684,14 @@ class GladiatusGUI:
         scroll_window = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
 
         def _sync_scrollregion(_event=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
+            bbox = canvas.bbox(scroll_window)
+            if bbox:
+                canvas.configure(scrollregion=bbox)
 
         def _sync_width(event):
             canvas.itemconfigure(scroll_window, width=event.width)
+            if self._body_background_image_id is not None:
+                canvas.coords(self._body_background_image_id, event.width // 2, 28)
 
         scroll_frame.bind("<Configure>", _sync_scrollregion)
         canvas.bind("<Configure>", _sync_width)
@@ -719,6 +732,30 @@ class GladiatusGUI:
 
         self._bind_mousewheel(canvas)
         self._refresh_overview()
+
+    def _load_background_art(self):
+        try:
+            if self._background_asset_path.exists():
+                self._background_image = tk.PhotoImage(file=str(self._background_asset_path))
+        except Exception:
+            self._background_image = None
+
+    def _mount_root_background(self):
+        if not self._background_image:
+            return
+
+        if self._root_background_label and self._root_background_label.winfo_exists():
+            return
+
+        self._root_background_label = tk.Label(
+            self.root,
+            image=self._background_image,
+            bg=self.BG,
+            bd=0,
+            highlightthickness=0,
+        )
+        self._root_background_label.place(relx=0.5, rely=0.5, anchor="center")
+        self._root_background_label.lower()
 
     def _create_overview_tile(self, parent, column, eyebrow, value_var, accent_color):
         tile_border = tk.Frame(parent, bg=self.BORDER)
