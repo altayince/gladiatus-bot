@@ -14,15 +14,26 @@ logger = logging.getLogger(__name__)
 
 
 class GladiatusGUI:
-    BG = "#0f172a"
-    PANEL = "#111827"
-    PANEL_ALT = "#1f2937"
-    TEXT = "#e5e7eb"
-    MUTED = "#94a3b8"
-    ACCENT = "#38bdf8"
+    BG = "#07101d"
+    PANEL = "#0f172a"
+    PANEL_ALT = "#162033"
+    INPUT = "#0b1220"
+    BORDER = "#24324a"
+    TEXT = "#eef2ff"
+    MUTED = "#93a4bf"
+    ACCENT = "#1ed760"
+    ACCENT_HOVER = "#35e179"
     SUCCESS = "#22c55e"
     WARNING = "#f59e0b"
     DANGER = "#ef4444"
+
+    FONT_TITLE = ("Segoe UI Semibold", 24)
+    FONT_SECTION = ("Segoe UI Semibold", 13)
+    FONT_CARD = ("Segoe UI Semibold", 12)
+    FONT_BODY = ("Segoe UI", 10)
+    FONT_BODY_SMALL = ("Segoe UI", 9)
+    FONT_VALUE = ("Segoe UI Semibold", 16)
+    FONT_MONO = ("Consolas", 10)
 
     EXPEDITION_LOCATIONS = [
         ("Grimwood", "0"),
@@ -39,8 +50,12 @@ class GladiatusGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Gladiatus Bot Control")
-        self.root.geometry("920x680")
-        self.root.minsize(820, 620)
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        width = min(max(1280, int(screen_w * 0.82)), 1680)
+        height = min(max(860, int(screen_h * 0.84)), 1080)
+        self.root.geometry(f"{width}x{height}")
+        self.root.minsize(1120, 760)
         self.root.configure(bg=self.BG)
 
         self.bot = None
@@ -66,6 +81,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "23", "issue_title": "Premium GUI refresh", "summary": "Ana ekran premium bir dark tema ile yenilendi; kartlar, tipografi, butonlar ve sag panel akisi daha rafine hale getirildi."},
             {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, Neler degisti kutusu Activity Log stiliyle ust baslikli hale getirildi ve scroll eklendi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
@@ -93,72 +109,127 @@ class GladiatusGUI:
 
         style.configure(".", background=self.BG, foreground=self.TEXT)
         style.configure("App.TFrame", background=self.BG)
-        style.configure("Panel.TFrame", background=self.PANEL)
-        style.configure("PanelAlt.TFrame", background=self.PANEL_ALT)
-        style.configure("CardTitle.TLabel", background=self.PANEL, foreground=self.TEXT, font=("Segoe UI Semibold", 12))
-        style.configure("Muted.TLabel", background=self.PANEL, foreground=self.MUTED, font=("Segoe UI", 10))
-        style.configure("Value.TLabel", background=self.PANEL, foreground=self.TEXT, font=("Segoe UI Semibold", 16))
+        style.configure("Panel.TFrame", background=self.PANEL, borderwidth=1, relief="solid")
+        style.configure("PanelAlt.TFrame", background=self.PANEL_ALT, borderwidth=1, relief="solid")
+        style.configure("CardTitle.TLabel", background=self.PANEL, foreground=self.TEXT, font=self.FONT_CARD)
+        style.configure("Muted.TLabel", background=self.PANEL, foreground=self.MUTED, font=self.FONT_BODY)
+        style.configure("Value.TLabel", background=self.PANEL, foreground=self.TEXT, font=self.FONT_VALUE)
         style.configure("Status.TLabel", background=self.PANEL_ALT, foreground=self.TEXT, font=("Segoe UI Semibold", 11))
         style.configure("Section.TLabelframe", background=self.PANEL, foreground=self.TEXT)
-        style.configure("Section.TLabelframe.Label", background=self.PANEL, foreground=self.TEXT, font=("Segoe UI Semibold", 11))
-        style.configure("Modern.TCheckbutton", background=self.PANEL, foreground=self.TEXT, font=("Segoe UI", 10))
-        style.map("Modern.TCheckbutton", background=[("active", self.PANEL)])
+        style.configure("Section.TLabelframe.Label", background=self.PANEL, foreground=self.TEXT, font=self.FONT_CARD)
+        style.configure("Modern.TCheckbutton", background=self.PANEL, foreground=self.TEXT, font=self.FONT_BODY, padding=2)
+        style.map(
+            "Modern.TCheckbutton",
+            background=[("active", self.PANEL), ("selected", self.PANEL)],
+            foreground=[("active", self.ACCENT), ("selected", self.TEXT)],
+        )
+        style.configure(
+            "TCombobox",
+            fieldbackground=self.INPUT,
+            background=self.INPUT,
+            foreground=self.TEXT,
+            arrowcolor=self.TEXT,
+            bordercolor=self.BORDER,
+            lightcolor=self.BORDER,
+            darkcolor=self.BORDER,
+            selectbackground=self.PANEL_ALT,
+            selectforeground=self.TEXT,
+        )
+        style.configure(
+            "TEntry",
+            fieldbackground=self.INPUT,
+            foreground=self.TEXT,
+            bordercolor=self.BORDER,
+            lightcolor=self.BORDER,
+            darkcolor=self.BORDER,
+            insertcolor=self.TEXT,
+        )
+        style.configure(
+            "Vertical.TScrollbar",
+            gripcount=0,
+            background=self.ACCENT,
+            darkcolor=self.BG,
+            lightcolor=self.BG,
+            troughcolor=self.BG,
+            bordercolor=self.BG,
+            arrowcolor=self.MUTED,
+        )
+        style.configure(
+            "Horizontal.TScrollbar",
+            gripcount=0,
+            background=self.ACCENT,
+            darkcolor=self.BG,
+            lightcolor=self.BG,
+            troughcolor=self.BG,
+            bordercolor=self.BG,
+            arrowcolor=self.MUTED,
+        )
         style.configure(
             "Primary.TButton",
             background=self.ACCENT,
-            foreground="#0f172a",
+            foreground=self.BG,
             borderwidth=0,
             focusthickness=0,
-            font=("Segoe UI Semibold", 10),
-            padding=(12, 8),
+            font=self.FONT_BODY,
+            padding=(14, 10),
         )
-        style.map("Primary.TButton", background=[("active", "#7dd3fc"), ("disabled", "#475569")], foreground=[("disabled", "#cbd5e1")])
+        style.map(
+            "Primary.TButton",
+            background=[("active", self.ACCENT_HOVER), ("disabled", "#334155")],
+            foreground=[("active", self.BG), ("disabled", "#94a3b8")],
+        )
         style.configure(
             "Danger.TButton",
             background=self.DANGER,
             foreground="white",
             borderwidth=0,
             focusthickness=0,
-            font=("Segoe UI Semibold", 10),
-            padding=(12, 8),
+            font=self.FONT_BODY,
+            padding=(14, 10),
         )
-        style.map("Danger.TButton", background=[("active", "#f87171"), ("disabled", "#475569")], foreground=[("disabled", "#cbd5e1")])
+        style.map(
+            "Danger.TButton",
+            background=[("active", "#f87171"), ("disabled", "#334155")],
+            foreground=[("disabled", "#cbd5e1")],
+        )
 
     def _build_layout(self):
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
 
-        shell = ttk.Frame(self.root, style="App.TFrame", padding=18)
+        shell = ttk.Frame(self.root, style="App.TFrame", padding=24)
         shell.grid(sticky="nsew")
         shell.columnconfigure(0, weight=1)
         shell.columnconfigure(1, weight=1)
         shell.rowconfigure(1, weight=1)
 
-        header = ttk.Frame(shell, style="PanelAlt.TFrame", padding=18)
-        header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
+        header = ttk.Frame(shell, style="PanelAlt.TFrame", padding=20)
+        header.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 18))
         header.columnconfigure(0, weight=1)
         tk.Label(
             header,
             text="Gladiatus Bot",
             bg=self.PANEL_ALT,
             fg=self.TEXT,
-            font=("Segoe UI Semibold", 22),
+            font=self.FONT_TITLE,
         ).grid(row=0, column=0, sticky="w")
         tk.Label(
             header,
             text="Daha temiz kontrol, daha guvenli mekanik gecisleri ve canli durum takibi.",
             bg=self.PANEL_ALT,
             fg=self.MUTED,
-            font=("Segoe UI", 10),
+            font=self.FONT_BODY,
         ).grid(row=1, column=0, sticky="w", pady=(6, 0))
         self.status_badge = tk.Label(
             header,
             textvariable=self.status_var,
-            bg="#0b1220",
+            bg="#0a1422",
             fg=self.ACCENT,
             font=("Segoe UI Semibold", 10),
-            padx=12,
-            pady=6,
+            padx=14,
+            pady=7,
+            bd=1,
+            relief="solid",
         )
         self.status_badge.grid(row=1, column=1, sticky="e", padx=(16, 0))
 
@@ -222,7 +293,7 @@ class GladiatusGUI:
         self._bind_mousewheel(canvas)
 
     def _build_credentials_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=0)
@@ -234,38 +305,38 @@ class GladiatusGUI:
         ttk.Label(content, text="Hesap", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(content, text="Giristen sonra ayni oturum uzerinden mekanikler doner.", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 10))
 
-        tk.Label(content, text="Email", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=2, column=0, sticky="w", pady=(0, 6))
+        tk.Label(content, text="Email", bg=self.PANEL, fg=self.MUTED, font=self.FONT_BODY).grid(row=2, column=0, sticky="w", pady=(0, 6))
         self.email_entry = tk.Entry(
             content,
-            bg="#0b1220",
+            bg=self.INPUT,
             fg=self.TEXT,
             insertbackground=self.TEXT,
             relief="solid",
             bd=1,
             highlightthickness=1,
-            highlightbackground="#3b4a63",
-            highlightcolor="#53b7ff",
-            font=("Segoe UI", 11),
+            highlightbackground=self.BORDER,
+            highlightcolor=self.ACCENT,
+            font=self.FONT_BODY,
         )
-        self.email_entry.grid(row=3, column=0, sticky="ew", ipady=8)
+        self.email_entry.grid(row=3, column=0, sticky="ew", ipady=7)
         if USERNAME:
             self.email_entry.insert(0, USERNAME)
 
-        tk.Label(content, text="Password", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=4, column=0, sticky="w", pady=(10, 6))
+        tk.Label(content, text="Password", bg=self.PANEL, fg=self.MUTED, font=self.FONT_BODY).grid(row=4, column=0, sticky="w", pady=(10, 6))
         self.password_entry = tk.Entry(
             content,
             show="*",
-            bg="#0b1220",
+            bg=self.INPUT,
             fg=self.TEXT,
             insertbackground=self.TEXT,
             relief="solid",
             bd=1,
             highlightthickness=1,
-            highlightbackground="#3b4a63",
-            highlightcolor="#53b7ff",
-            font=("Segoe UI", 11),
+            highlightbackground=self.BORDER,
+            highlightcolor=self.ACCENT,
+            font=self.FONT_BODY,
         )
-        self.password_entry.grid(row=5, column=0, sticky="ew", ipady=8)
+        self.password_entry.grid(row=5, column=0, sticky="ew", ipady=7)
         if PASSWORD:
             self.password_entry.insert(0, PASSWORD)
 
@@ -281,12 +352,12 @@ class GladiatusGUI:
             style="Danger.TButton",
             command=self.captcha_solved_callback,
             state="disabled",
-            width=18,
+            width=20,
         )
         self.captcha_btn.grid(row=0, column=1, sticky="w", padx=(12, 0))
 
     def _build_controls_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=1, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
 
@@ -301,7 +372,7 @@ class GladiatusGUI:
         self.stop_btn.config(state="disabled")
 
     def _build_mechanics_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=2, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
@@ -384,15 +455,15 @@ class GladiatusGUI:
                 fg=self.TEXT,
                 activebackground=self.PANEL,
                 activeforeground=self.TEXT,
-                selectcolor="#0b1220",
-                font=("Segoe UI", 10),
+                selectcolor=self.INPUT,
+                font=self.FONT_BODY,
             ).grid(row=0, column=0, sticky="w")
             tk.Label(
                 option_frame,
                 text=description,
                 bg=self.PANEL,
                 fg=self.MUTED,
-                font=("Segoe UI", 9),
+                font=self.FONT_BODY_SMALL,
             ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
 
         dungeon_section = ttk.Frame(locations_box, style="Panel.TFrame")
@@ -435,8 +506,8 @@ class GladiatusGUI:
                 fg=self.TEXT,
                 activebackground=self.PANEL,
                 activeforeground=self.TEXT,
-                selectcolor="#0b1220",
-                font=("Segoe UI", 10),
+                selectcolor=self.INPUT,
+                font=self.FONT_BODY,
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
         ttk.Separator(panel, orient="horizontal").grid(row=3, column=0, columnspan=2, sticky="ew", pady=(16, 12))
@@ -464,11 +535,11 @@ class GladiatusGUI:
             to=999,
             width=6,
             textvariable=self.recovery_threshold_var,
-            bg="#0b1220",
+            bg=self.INPUT,
             fg=self.TEXT,
             insertbackground=self.TEXT,
             relief="flat",
-            font=("Segoe UI", 11),
+            font=self.FONT_BODY,
         )
         self.recovery_threshold_spinbox.pack(side="left", ipady=4)
 
@@ -492,16 +563,16 @@ class GladiatusGUI:
             to=99,
             width=5,
             textvariable=self.hp_min_var,
-            bg="#0b1220",
+            bg=self.INPUT,
             fg=self.TEXT,
             insertbackground=self.TEXT,
             relief="flat",
-            font=("Segoe UI", 11),
+            font=self.FONT_BODY,
         )
         self.hp_spinbox.pack(side="left", ipady=4)
 
     def _build_expedition_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
 
@@ -515,7 +586,7 @@ class GladiatusGUI:
         location_row = ttk.Frame(panel, style="Panel.TFrame")
         location_row.grid(row=2, column=0, sticky="ew", pady=(0, 14))
         location_row.columnconfigure(1, weight=1)
-        tk.Label(location_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        tk.Label(location_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=self.FONT_BODY).grid(row=0, column=0, sticky="w", padx=(0, 10))
         self.location_combo = ttk.Combobox(
             location_row,
             textvariable=self.expedition_location_var,
@@ -552,19 +623,19 @@ class GladiatusGUI:
                 fg=self.TEXT,
                 activebackground=self.PANEL,
                 activeforeground=self.TEXT,
-                selectcolor="#0b1220",
-                font=("Segoe UI", 10),
+                selectcolor=self.INPUT,
+                font=self.FONT_BODY,
             ).grid(row=0, column=0, sticky="w")
             tk.Label(
                 option_frame,
                 text=description,
                 bg=self.PANEL,
                 fg=self.MUTED,
-                font=("Segoe UI", 9),
+                font=self.FONT_BODY_SMALL,
             ).grid(row=1, column=0, sticky="w", padx=(24, 0), pady=(2, 0))
 
     def _build_dungeon_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=0, column=0, sticky="ew")
         panel.columnconfigure(0, weight=1)
 
@@ -578,7 +649,7 @@ class GladiatusGUI:
         dungeon_row = ttk.Frame(panel, style="Panel.TFrame")
         dungeon_row.grid(row=2, column=0, sticky="ew")
         dungeon_row.columnconfigure(1, weight=1)
-        tk.Label(dungeon_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        tk.Label(dungeon_row, text="Lokasyon", bg=self.PANEL, fg=self.MUTED, font=self.FONT_BODY).grid(row=0, column=0, sticky="w", padx=(0, 10))
         self.dungeon_combo = ttk.Combobox(
             dungeon_row,
             textvariable=self.dungeon_location_var,
@@ -591,7 +662,7 @@ class GladiatusGUI:
         difficulty_row = ttk.Frame(panel, style="Panel.TFrame")
         difficulty_row.grid(row=3, column=0, sticky="ew", pady=(14, 0))
         difficulty_row.columnconfigure(1, weight=1)
-        tk.Label(difficulty_row, text="Difficulty", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", padx=(0, 10))
+        tk.Label(difficulty_row, text="Difficulty", bg=self.PANEL, fg=self.MUTED, font=self.FONT_BODY).grid(row=0, column=0, sticky="w", padx=(0, 10))
 
         difficulty_box = ttk.Frame(difficulty_row, style="Panel.TFrame")
         difficulty_box.grid(row=0, column=1, sticky="w")
@@ -605,12 +676,12 @@ class GladiatusGUI:
                 fg=self.TEXT,
                 activebackground=self.PANEL,
                 activeforeground=self.TEXT,
-                selectcolor="#0b1220",
-                font=("Segoe UI", 10),
+                selectcolor=self.INPUT,
+                font=self.FONT_BODY,
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
     def _build_log_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
 
@@ -619,13 +690,13 @@ class GladiatusGUI:
             panel,
             height=16,
             wrap="word",
-            bg="#08111f",
+            bg=self.INPUT,
             fg="#dbeafe",
             insertbackground="#dbeafe",
             relief="flat",
             borderwidth=0,
             highlightthickness=0,
-            font=("Consolas", 10),
+            font=self.FONT_MONO,
             padx=0,
             pady=10,
         )
@@ -635,7 +706,7 @@ class GladiatusGUI:
         self.log_text.configure(yscrollcommand=log_scroll.set)
 
     def _build_status_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
@@ -654,14 +725,39 @@ class GladiatusGUI:
         )
         self.hp_refill_value.grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 8))
 
-        self.mode_value = tk.Label(panel, text="Idle", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 11))
-        self.mode_value.grid(row=3, column=0, sticky="w")
+        chip_row = ttk.Frame(panel, style="Panel.TFrame")
+        chip_row.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        chip_row.columnconfigure(0, weight=1)
+        chip_row.columnconfigure(1, weight=1)
 
-        self.loop_value = tk.Label(panel, text="Dongu bekliyor", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 11))
-        self.loop_value.grid(row=3, column=1, sticky="e")
+        self.mode_value = tk.Label(
+            chip_row,
+            text="Idle",
+            bg=self.INPUT,
+            fg=self.MUTED,
+            font=self.FONT_BODY,
+            padx=10,
+            pady=5,
+            bd=1,
+            relief="solid",
+        )
+        self.mode_value.grid(row=0, column=0, sticky="w")
+
+        self.loop_value = tk.Label(
+            chip_row,
+            text="Dongu bekliyor",
+            bg=self.INPUT,
+            fg=self.MUTED,
+            font=self.FONT_BODY,
+            padx=10,
+            pady=5,
+            bd=1,
+            relief="solid",
+        )
+        self.loop_value.grid(row=0, column=1, sticky="e")
 
     def _build_notes_panel(self, parent):
-        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=18)
         panel.grid(row=1, column=0, sticky="ew")
         panel.columnconfigure(0, weight=1)
 
@@ -671,7 +767,7 @@ class GladiatusGUI:
             panel,
             height=12,
             wrap="word",
-            bg="#08111f",
+            bg=self.INPUT,
             fg="#dbeafe",
             insertbackground="#dbeafe",
             relief="flat",
@@ -679,7 +775,7 @@ class GladiatusGUI:
             highlightthickness=0,
             padx=0,
             pady=10,
-            font=("Segoe UI", 10),
+            font=self.FONT_BODY,
         )
         self.change_notes_text.grid(row=1, column=0, sticky="ew", pady=(12, 0))
         notes_scroll = ttk.Scrollbar(panel, orient="vertical", command=self.change_notes_text.yview)
@@ -708,7 +804,7 @@ class GladiatusGUI:
                     self.change_notes_text.insert("end", "\n")
                 else:
                     self.change_notes_text.insert("end", f"- {note}\n\n")
-            self.change_notes_text.tag_configure("issue_title", font=("Segoe UI Semibold", 10))
+            self.change_notes_text.tag_configure("issue_title", foreground=self.ACCENT, font=("Segoe UI Semibold", 10))
             self.change_notes_text.configure(state="disabled")
         except Exception:
             pass
@@ -864,13 +960,13 @@ class GladiatusGUI:
         if playing:
             self.play_btn.config(text="Playing", state="disabled")
             self.stop_btn.config(state="normal")
-            self.mode_value.config(text="Auto mode active", fg=self.SUCCESS)
-            self.loop_value.config(text="Dongu calisiyor", fg=self.ACCENT)
+            self.mode_value.config(text="Auto mode active", fg=self.ACCENT, bg="#0f2a1c", highlightbackground=self.ACCENT)
+            self.loop_value.config(text="Dongu calisiyor", fg=self.TEXT, bg="#10233d", highlightbackground=self.BORDER)
         else:
             self.play_btn.config(text="Play", state="normal")
             self.stop_btn.config(state="disabled")
-            self.mode_value.config(text="Idle", fg=self.MUTED)
-            self.loop_value.config(text="Dongu bekliyor", fg=self.MUTED)
+            self.mode_value.config(text="Idle", fg=self.MUTED, bg=self.INPUT, highlightbackground=self.BORDER)
+            self.loop_value.config(text="Dongu bekliyor", fg=self.MUTED, bg=self.INPUT, highlightbackground=self.BORDER)
 
     def start_login(self):
         email = self.email_entry.get().strip()
