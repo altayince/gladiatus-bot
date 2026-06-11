@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; Hesap ve Durum ayni satira 50/50 yerlestirildi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
+            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, Hesap ve Durum ayni satira 50/50 yerlestirildi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
@@ -162,17 +162,43 @@ class GladiatusGUI:
         )
         self.status_badge.grid(row=1, column=1, sticky="e", padx=(16, 0))
 
-        left = ttk.Frame(shell, style="App.TFrame")
-        left.grid(row=1, column=0, sticky="nsew", padx=(0, 12))
+        body = ttk.Frame(shell, style="App.TFrame")
+        body.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(0, weight=1)
+
+        canvas = tk.Canvas(body, bg=self.BG, highlightthickness=0, bd=0)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        body_scroll = ttk.Scrollbar(body, orient="vertical", command=canvas.yview)
+        body_scroll.grid(row=0, column=1, sticky="ns")
+        canvas.configure(yscrollcommand=body_scroll.set)
+
+        scroll_frame = ttk.Frame(canvas, style="App.TFrame")
+        scroll_window = canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+
+        def _sync_scrollregion(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _sync_width(event):
+            canvas.itemconfigure(scroll_window, width=event.width)
+
+        scroll_frame.bind("<Configure>", _sync_scrollregion)
+        canvas.bind("<Configure>", _sync_width)
+
+        left = ttk.Frame(scroll_frame, style="App.TFrame")
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         left.columnconfigure(0, weight=1)
         left.rowconfigure(0, weight=0)
         left.rowconfigure(1, weight=0)
         left.rowconfigure(2, weight=0)
         left.rowconfigure(3, weight=1)
 
-        right = ttk.Frame(shell, style="App.TFrame")
-        right.grid(row=1, column=1, sticky="nsew")
+        right = ttk.Frame(scroll_frame, style="App.TFrame")
+        right.grid(row=0, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
+
+        scroll_frame.columnconfigure(0, weight=3)
+        scroll_frame.columnconfigure(1, weight=2)
 
         top_row = ttk.Frame(left, style="App.TFrame")
         top_row.grid(row=0, column=0, sticky="ew", pady=(0, 12))
@@ -186,6 +212,8 @@ class GladiatusGUI:
         self._build_log_panel(left)
 
         self._build_notes_panel(right)
+
+        self._bind_mousewheel(canvas)
 
     def _build_credentials_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
@@ -627,7 +655,7 @@ class GladiatusGUI:
 
     def _build_notes_panel(self, parent):
         panel = ttk.Frame(parent, style="PanelAlt.TFrame", padding=16)
-        panel.grid(row=1, column=0, sticky="ew")
+        panel.grid(row=0, column=0, sticky="ew")
         panel.columnconfigure(0, weight=1)
 
         tk.Label(panel, text="Neler degisti?", bg=self.PANEL_ALT, fg=self.TEXT, font=("Segoe UI Semibold", 12)).grid(
@@ -675,6 +703,13 @@ class GladiatusGUI:
             self.change_notes_text.configure(state="disabled")
         except Exception:
             pass
+
+    def _bind_mousewheel(self, canvas):
+        def _on_mousewheel(event):
+            delta = -1 * int(event.delta / 120)
+            canvas.yview_scroll(delta, "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
     def add_change_note(self, issue_number, issue_title, note):
         note = (note or "").strip()
