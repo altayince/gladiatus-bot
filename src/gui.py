@@ -151,6 +151,7 @@ class ThemedDropdown(tk.Frame):
         self.muted_color = muted_color
         self.accent_color = accent_color
         self.width = width
+        self.height = 56
         self.popup = None
         self.popup_inner = None
 
@@ -188,10 +189,12 @@ class ThemedDropdown(tk.Frame):
         )
         self.chevron.grid(row=0, column=1, rowspan=2, sticky="e", padx=(14, 0))
 
-        self.face.configure(width=width)
+        self.face.configure(width=width - 2, height=self.height - 2)
         self.face.grid_propagate(False)
-        self.configure(width=width)
+        self.face.pack_propagate(False)
+        self.configure(width=width, height=self.height)
         self.pack_propagate(False)
+        self.grid_propagate(False)
 
         for widget in (self, self.face, self.eyebrow, self.value_label, self.chevron):
             widget.bind("<Button-1>", self._toggle_popup)
@@ -284,10 +287,12 @@ class ThemedButton(tk.Frame):
         self.state = "normal"
         self.text = text
         self.width = width
+        self.height = 44
         self.label = tk.Label(self, text=text, bg=self.colors["bg"], fg=self.colors["fg"], font=("Segoe UI Semibold", 10), padx=16, pady=10, cursor="hand2")
         self.label.pack(fill="both", expand=True, padx=1, pady=1)
-        super().configure(width=width)
+        super().configure(width=width, height=self.height)
         self.pack_propagate(False)
+        self.grid_propagate(False)
         self.bind("<Button-1>", self._on_click)
         self.label.bind("<Button-1>", self._on_click)
         self.bind("<Enter>", self._on_enter)
