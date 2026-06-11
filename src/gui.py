@@ -179,29 +179,24 @@ class GladiatusGUI:
         self._build_mechanics_panel(left)
         self._build_log_panel(left)
 
-        self._build_status_panel(right)
         self._build_notes_panel(right)
 
     def _build_credentials_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
         panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         panel.columnconfigure(0, weight=1)
-        panel.columnconfigure(1, weight=1)
+        panel.columnconfigure(1, weight=0)
 
-        ttk.Label(panel, text="Hesap", style="CardTitle.TLabel").grid(row=0, column=0, columnspan=2, sticky="w")
-        ttk.Label(panel, text="Giristen sonra ayni oturum uzerinden mekanikler doner.", style="Muted.TLabel").grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 10))
+        content = ttk.Frame(panel, style="Panel.TFrame")
+        content.grid(row=0, column=0, sticky="ew")
+        content.columnconfigure(0, weight=1)
 
-        form_row = ttk.Frame(panel, style="Panel.TFrame")
-        form_row.grid(row=2, column=0, columnspan=2, sticky="ew")
-        form_row.columnconfigure(0, weight=1)
-        form_row.columnconfigure(1, weight=1)
+        ttk.Label(content, text="Hesap", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(content, text="Giristen sonra ayni oturum uzerinden mekanikler doner.", style="Muted.TLabel").grid(row=1, column=0, sticky="w", pady=(4, 10))
 
-        email_group = ttk.Frame(form_row, style="Panel.TFrame", padding=(0, 0, 10, 0))
-        email_group.grid(row=0, column=0, sticky="ew")
-        email_group.columnconfigure(0, weight=1)
-        tk.Label(email_group, text="Email", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        tk.Label(content, text="Email", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=2, column=0, sticky="w", pady=(0, 6))
         self.email_entry = tk.Entry(
-            email_group,
+            content,
             bg="#0b1220",
             fg=self.TEXT,
             insertbackground=self.TEXT,
@@ -212,16 +207,13 @@ class GladiatusGUI:
             highlightcolor="#53b7ff",
             font=("Segoe UI", 11),
         )
-        self.email_entry.grid(row=1, column=0, sticky="ew", ipady=8)
+        self.email_entry.grid(row=3, column=0, sticky="ew", ipady=8)
         if USERNAME:
             self.email_entry.insert(0, USERNAME)
 
-        password_group = ttk.Frame(form_row, style="Panel.TFrame", padding=(10, 0, 0, 0))
-        password_group.grid(row=0, column=1, sticky="ew")
-        password_group.columnconfigure(0, weight=1)
-        tk.Label(password_group, text="Password", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        tk.Label(content, text="Password", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).grid(row=4, column=0, sticky="w", pady=(10, 6))
         self.password_entry = tk.Entry(
-            password_group,
+            content,
             show="*",
             bg="#0b1220",
             fg=self.TEXT,
@@ -233,12 +225,12 @@ class GladiatusGUI:
             highlightcolor="#53b7ff",
             font=("Segoe UI", 11),
         )
-        self.password_entry.grid(row=1, column=0, sticky="ew", ipady=8)
+        self.password_entry.grid(row=5, column=0, sticky="ew", ipady=8)
         if PASSWORD:
             self.password_entry.insert(0, PASSWORD)
 
-        buttons_row = ttk.Frame(panel, style="Panel.TFrame")
-        buttons_row.grid(row=4, column=0, columnspan=2, sticky="w", pady=(14, 0))
+        buttons_row = ttk.Frame(content, style="Panel.TFrame")
+        buttons_row.grid(row=6, column=0, sticky="w", pady=(14, 0))
 
         self.login_btn = ttk.Button(buttons_row, text="Login", style="Primary.TButton", command=self.start_login, width=12)
         self.login_btn.grid(row=0, column=0, sticky="w")
@@ -252,6 +244,8 @@ class GladiatusGUI:
             width=18,
         )
         self.captcha_btn.grid(row=0, column=1, sticky="w", padx=(12, 0))
+
+        self._build_status_panel(panel)
 
     def _build_controls_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
@@ -603,7 +597,7 @@ class GladiatusGUI:
 
     def _build_status_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
-        panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        panel.grid(row=0, column=1, sticky="ne", padx=(16, 0), pady=(0, 0))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
 
