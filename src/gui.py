@@ -196,13 +196,16 @@ class GladiatusGUI:
         right = ttk.Frame(scroll_frame, style="App.TFrame")
         right.grid(row=0, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
+        right.rowconfigure(0, weight=1)
 
         scroll_frame.columnconfigure(0, weight=1)
         scroll_frame.columnconfigure(1, weight=1)
 
         right_stack = ttk.Frame(right, style="App.TFrame")
-        right_stack.grid(row=0, column=0, sticky="ew")
+        right_stack.grid(row=0, column=0, sticky="nsew")
         right_stack.columnconfigure(0, weight=1)
+        right_stack.rowconfigure(0, weight=0)
+        right_stack.rowconfigure(1, weight=0)
 
         top_row = ttk.Frame(left, style="App.TFrame")
         top_row.grid(row=0, column=0, sticky="ew", pady=(0, 12))
