@@ -58,11 +58,25 @@ class GladiatusGUI:
         self.dungeon_var = tk.BooleanVar(value=True)
         self.circus_var = tk.BooleanVar(value=True)
         self.refill_hp_var = tk.BooleanVar(value=False)
+        self.recovery_buy_refill_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
+        self.recovery_threshold_var = tk.StringVar(value="10")
         self.expedition_location_var = tk.StringVar(value="Grimwood")
         self.expedition_target_var = tk.StringVar(value="1")
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
+        self.change_notes = [
+            {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery tab eklendi; refill potlar threshold altinda shop'tan otomatik aliniyor ve her alimdan sonra sayi yeniden dogrulanip UI guncelleniyor."},
+            "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
+            "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
+            "HP refill sayaci ana ekranda gorunuyor.",
+            "HP refill akisi ilk envanter bagini ve avatar hedefini kullaniyor.",
+            "Expedition country map uzerinden secili lokasyona gidiyor.",
+            "Dungeon secilen country map lokasyonunu acip rastgele saldiriyor.",
+            "Workflow issue-first, branch-per-task ve PR-only hale getirildi.",
+            "Main branch'e direkt pushlar engellendi.",
+            "PR'lar GLA project ve issue baglantisi ile takip ediliyor.",
+        ]
 
         self._settings_suspended = True
         self._configure_styles()
@@ -158,15 +172,19 @@ class GladiatusGUI:
         main_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
         expedition_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
         dungeon_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
+        recovery_tab = ttk.Frame(notebook, style="App.TFrame", padding=0)
         notebook.add(main_tab, text="Main")
         notebook.add(expedition_tab, text="Expedition")
         notebook.add(dungeon_tab, text="Dungeon")
+        notebook.add(recovery_tab, text="Recovery")
         main_tab.columnconfigure(0, weight=1)
         main_tab.rowconfigure(3, weight=1)
         expedition_tab.columnconfigure(0, weight=1)
         expedition_tab.rowconfigure(0, weight=1)
         dungeon_tab.columnconfigure(0, weight=1)
         dungeon_tab.rowconfigure(0, weight=1)
+        recovery_tab.columnconfigure(0, weight=1)
+        recovery_tab.rowconfigure(0, weight=1)
 
         right = ttk.Frame(shell, style="App.TFrame")
         right.grid(row=1, column=1, sticky="nsew")
@@ -178,6 +196,7 @@ class GladiatusGUI:
         self._build_log_panel(main_tab)
         self._build_expedition_panel(expedition_tab)
         self._build_dungeon_panel(dungeon_tab)
+        self._build_recovery_panel(recovery_tab)
 
         self._build_status_panel(right)
         self._build_notes_panel(right)
@@ -384,6 +403,47 @@ class GladiatusGUI:
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
+    def _build_recovery_panel(self, parent):
+        panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
+        panel.grid(row=0, column=0, sticky="ew")
+        panel.columnconfigure(0, weight=1)
+
+        ttk.Label(panel, text="Recovery", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
+        ttk.Label(
+            panel,
+            text="Refill pot sayisi dusunce shop'a gidip stoğu tamamlar.",
+            style="Muted.TLabel",
+        ).grid(row=1, column=0, sticky="w", pady=(4, 12))
+
+        recovery_row = ttk.Frame(panel, style="Panel.TFrame")
+        recovery_row.grid(row=2, column=0, sticky="ew")
+        recovery_row.columnconfigure(0, weight=1)
+        recovery_row.columnconfigure(1, weight=0)
+
+        ttk.Checkbutton(
+            recovery_row,
+            text="Buy refill pots when refill pots are under",
+            variable=self.recovery_buy_refill_var,
+            style="Modern.TCheckbutton",
+        ).grid(row=0, column=0, sticky="w", pady=4)
+
+        threshold_box = ttk.Frame(recovery_row, style="Panel.TFrame")
+        threshold_box.grid(row=0, column=1, sticky="e")
+        tk.Label(threshold_box, text="Threshold", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left", padx=(0, 10))
+        self.recovery_threshold_spinbox = tk.Spinbox(
+            threshold_box,
+            from_=0,
+            to=999,
+            width=6,
+            textvariable=self.recovery_threshold_var,
+            bg="#0b1220",
+            fg=self.TEXT,
+            insertbackground=self.TEXT,
+            relief="flat",
+            font=("Segoe UI", 11),
+        )
+        self.recovery_threshold_spinbox.pack(side="left", ipady=4)
+
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
         panel.grid(row=3, column=0, sticky="nsew")
@@ -437,19 +497,70 @@ class GladiatusGUI:
     def _build_notes_panel(self, parent):
         panel = ttk.Frame(parent, style="PanelAlt.TFrame", padding=16)
         panel.grid(row=1, column=0, sticky="ew")
-        tk.Label(panel, text="Neler degisti?", bg=self.PANEL_ALT, fg=self.TEXT, font=("Segoe UI Semibold", 12)).pack(anchor="w")
-        tk.Label(
+        panel.columnconfigure(0, weight=1)
+
+        tk.Label(panel, text="Neler degisti?", bg=self.PANEL_ALT, fg=self.TEXT, font=("Segoe UI Semibold", 12)).grid(
+            row=0, column=0, sticky="w"
+        )
+
+        self.change_notes_text = tk.Text(
             panel,
-            text=(
-                "Mekanik gecisleri daha guvenli. Bot artik hedef sayfa acilmadan mob aramiyor "
-                "ve aksiyonlardan sonra overviewe donerek bir sonraki adimi daha temiz baslatiyor."
-            ),
+            height=12,
+            wrap="word",
             bg=self.PANEL_ALT,
             fg=self.MUTED,
-            justify="left",
-            wraplength=280,
+            relief="flat",
+            highlightthickness=0,
+            borderwidth=0,
+            padx=0,
+            pady=0,
             font=("Segoe UI", 10),
-        ).pack(anchor="w", pady=(8, 0))
+        )
+        self.change_notes_text.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        self.change_notes_text.configure(state="disabled")
+        self._render_change_notes()
+
+    def _render_change_notes(self):
+        try:
+            self.change_notes_text.configure(state="normal")
+            self.change_notes_text.delete("1.0", "end")
+            for note in self.change_notes[:10]:
+                if isinstance(note, dict):
+                    issue_number = str(note.get("issue_number", "")).strip()
+                    issue_title = str(note.get("issue_title", "")).strip()
+                    summary = str(note.get("summary", "")).strip()
+                    self.change_notes_text.insert("end", f"- #{issue_number} " if issue_number else "- ")
+                    title_start = self.change_notes_text.index("end-1c")
+                    self.change_notes_text.insert("end", f"{issue_title}\n")
+                    title_end = self.change_notes_text.index("end-1c")
+                    if issue_title:
+                        self.change_notes_text.tag_add("issue_title", title_start, title_end)
+                    if summary:
+                        self.change_notes_text.insert("end", f"{summary}\n")
+                    self.change_notes_text.insert("end", "\n")
+                else:
+                    self.change_notes_text.insert("end", f"- {note}\n\n")
+            self.change_notes_text.tag_configure("issue_title", font=("Segoe UI Semibold", 10))
+            self.change_notes_text.configure(state="disabled")
+        except Exception:
+            pass
+
+    def add_change_note(self, issue_number, issue_title, note):
+        note = (note or "").strip()
+        if not note:
+            return
+        issue_number = str(issue_number).strip()
+        issue_title = (issue_title or "").strip()
+        self.change_notes.insert(
+            0,
+            {
+                "issue_number": issue_number,
+                "issue_title": issue_title,
+                "summary": note,
+            },
+        )
+        self.change_notes = self.change_notes[:10]
+        self._render_change_notes()
 
     def _bind_settings_watchers(self):
         for variable in (
@@ -457,7 +568,9 @@ class GladiatusGUI:
             self.dungeon_var,
             self.circus_var,
             self.refill_hp_var,
+            self.recovery_buy_refill_var,
             self.hp_min_var,
+            self.recovery_threshold_var,
             self.expedition_location_var,
             self.expedition_target_var,
             self.dungeon_location_var,
@@ -476,7 +589,9 @@ class GladiatusGUI:
             "dungeon": bool(self.dungeon_var.get()),
             "circus": bool(self.circus_var.get()),
             "refill_hp": bool(self.refill_hp_var.get()),
+            "recovery_buy_refill": bool(self.recovery_buy_refill_var.get()),
             "hp_min": self.hp_min_var.get().strip() or "25",
+            "recovery_threshold": self.recovery_threshold_var.get().strip() or "10",
             "expedition_location": self.get_expedition_location(),
             "expedition_target": self.get_expedition_target(),
             "dungeon_location": self.get_dungeon_location(),
@@ -510,9 +625,13 @@ class GladiatusGUI:
             self.dungeon_var.set(self._coerce_bool(data.get("dungeon"), True))
             self.circus_var.set(self._coerce_bool(data.get("circus"), True))
             self.refill_hp_var.set(self._coerce_bool(data.get("refill_hp"), False))
+            self.recovery_buy_refill_var.set(self._coerce_bool(data.get("recovery_buy_refill"), False))
 
             hp_min = data.get("hp_min", "25")
             self.hp_min_var.set(str(hp_min))
+
+            recovery_threshold = data.get("recovery_threshold", "10")
+            self.recovery_threshold_var.set(str(recovery_threshold))
 
             expedition_location = data.get("expedition_location", "Grimwood")
             self.expedition_location_var.set(self._coerce_expedition_location(expedition_location))
@@ -711,14 +830,17 @@ class GladiatusGUI:
     def refresh_hp_refill_count(self):
         try:
             if not self.bot:
-                self._ui(lambda: self.hp_refill_count_var.set("Refill pots: --"))
+                self.set_hp_refill_count(None)
                 return
 
             count = self.bot.get_healing_item_count(logger_callback=None)
-            text = f"Refill pots: {count}" if count is not None else "Refill pots: --"
-            self._ui(lambda: self.hp_refill_count_var.set(text))
+            self.set_hp_refill_count(count)
         except Exception:
             pass
+
+    def set_hp_refill_count(self, count):
+        text = f"Refill pots: {count}" if count is not None else "Refill pots: --"
+        self._ui(lambda: self.hp_refill_count_var.set(text))
 
     def get_min_hp_percent(self):
         try:
@@ -768,6 +890,13 @@ class GladiatusGUI:
     def get_dungeon_difficulty(self):
         return self._coerce_dungeon_difficulty(self.dungeon_difficulty_var.get())
 
+    def get_recovery_threshold(self):
+        try:
+            value = int(self.recovery_threshold_var.get())
+            return max(0, min(999, value))
+        except (ValueError, tk.TclError):
+            return 10
+
     def append_log(self, msg):
         try:
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -810,6 +939,16 @@ class GladiatusGUI:
                     break
 
                 min_hp = self.get_min_hp_percent()
+
+                if self.recovery_buy_refill_var.get():
+                    try:
+                        self.bot.attempt_buy_refill_pots_if_needed(
+                            min_item_count=self.get_recovery_threshold(),
+                            logger_callback=self.append_log,
+                            count_update_callback=self.set_hp_refill_count,
+                        )
+                    except Exception as exc:
+                        self.append_log(f"Recovery refill buy error: {exc}")
 
                 if self.refill_hp_var.get():
                     try:
