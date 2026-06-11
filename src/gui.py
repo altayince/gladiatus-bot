@@ -662,7 +662,7 @@ class GladiatusGUI:
 
     def _build_notes_panel(self, parent):
         panel = ttk.Frame(parent, style="PanelAlt.TFrame", padding=16)
-        panel.grid(row=1, column=0, sticky="ew")
+        panel.grid(row=1, column=0, sticky="ew", padx=(12, 0))
         panel.columnconfigure(0, weight=1)
 
         tk.Label(panel, text="Neler degisti?", bg=self.PANEL_ALT, fg=self.TEXT, font=("Segoe UI Semibold", 12)).grid(
