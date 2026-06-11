@@ -66,7 +66,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery tab eklendi; refill potlar threshold altinda shop'tan otomatik aliniyor ve her alimdan sonra sayi yeniden dogrulanip UI guncelleniyor."},
+            {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery tab toparlandi; HP refill ayari da buraya tasindi, refill potlar threshold altinda shop'tan otomatik aliniyor ve her alimdan sonra sayi yeniden dogrulanip UI guncelleniyor."},
             "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
             "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
             "HP refill sayaci ana ekranda gorunuyor.",
@@ -275,24 +275,9 @@ class GladiatusGUI:
         ttk.Checkbutton(panel, text="Expedition", variable=self.expedition_var, style="Modern.TCheckbutton").grid(row=0, column=0, sticky="w", pady=4)
         ttk.Checkbutton(panel, text="Dungeon", variable=self.dungeon_var, style="Modern.TCheckbutton").grid(row=0, column=1, sticky="w", pady=4)
         ttk.Checkbutton(panel, text="Circus Turma", variable=self.circus_var, style="Modern.TCheckbutton").grid(row=1, column=0, sticky="w", pady=4)
-        ttk.Checkbutton(panel, text="Refill HP", variable=self.refill_hp_var, style="Modern.TCheckbutton").grid(row=1, column=1, sticky="w", pady=4)
-
-        hp_row = ttk.Frame(panel, style="Panel.TFrame")
-        hp_row.grid(row=2, column=0, columnspan=2, sticky="w", pady=(12, 0))
-        tk.Label(hp_row, text="Min HP %", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left")
-        self.hp_spinbox = tk.Spinbox(
-            hp_row,
-            from_=1,
-            to=99,
-            width=5,
-            textvariable=self.hp_min_var,
-            bg="#0b1220",
-            fg=self.TEXT,
-            insertbackground=self.TEXT,
-            relief="flat",
-            font=("Segoe UI", 11),
+        ttk.Label(panel, text="HP refill ayari Recovery tabine tasindi.", style="Muted.TLabel").grid(
+            row=1, column=1, sticky="w", pady=4
         )
-        self.hp_spinbox.pack(side="left", padx=(10, 0), ipady=4)
 
     def _build_expedition_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
@@ -443,6 +428,34 @@ class GladiatusGUI:
             font=("Segoe UI", 11),
         )
         self.recovery_threshold_spinbox.pack(side="left", ipady=4)
+
+        hp_row = ttk.Frame(panel, style="Panel.TFrame")
+        hp_row.grid(row=3, column=0, sticky="ew", pady=(16, 0))
+        hp_row.columnconfigure(1, weight=1)
+
+        ttk.Checkbutton(
+            hp_row,
+            text="Refill HP",
+            variable=self.refill_hp_var,
+            style="Modern.TCheckbutton",
+        ).grid(row=0, column=0, sticky="w", pady=4)
+
+        hp_box = ttk.Frame(hp_row, style="Panel.TFrame")
+        hp_box.grid(row=0, column=1, sticky="e")
+        tk.Label(hp_box, text="Min HP %", bg=self.PANEL, fg=self.MUTED, font=("Segoe UI", 10)).pack(side="left", padx=(0, 10))
+        self.hp_spinbox = tk.Spinbox(
+            hp_box,
+            from_=1,
+            to=99,
+            width=5,
+            textvariable=self.hp_min_var,
+            bg="#0b1220",
+            fg=self.TEXT,
+            insertbackground=self.TEXT,
+            relief="flat",
+            font=("Segoe UI", 11),
+        )
+        self.hp_spinbox.pack(side="left", ipady=4)
 
     def _build_log_panel(self, parent):
         panel = ttk.Frame(parent, style="Panel.TFrame", padding=16)
