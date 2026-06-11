@@ -1630,7 +1630,7 @@ class GladiatusGUI:
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
     def _build_log_panel(self, parent):
-        panel = self._create_card(parent, 0, 0, pady=(0, 12), padding=4)
+        panel = self._create_card(parent, 0, 0, pady=(0, 12), padding=25)
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=0)
 
@@ -1760,6 +1760,7 @@ class GladiatusGUI:
 
     def _bind_mousewheel(self, canvas):
         def _on_mousewheel(event):
+            self._close_all_dropdowns()
             delta = -1 * int(event.delta / 120)
             canvas.yview_scroll(delta, "units")
 
