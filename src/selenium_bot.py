@@ -17,13 +17,13 @@ logging.basicConfig(level=logging.INFO)
 
 class GladiatusBot:
     EXPEDITION_LOCATIONS = {
-        "grimwood": 0,
-        "pirate harbour": 1,
-        "misty mountains": 2,
-        "wolf cave": 3,
-        "ancient temple": 4,
-        "barbarian village": 5,
-        "bandit camp": 6,
+        "voodoo temple": 0,
+        "bridge": 1,
+        "blood cave": 2,
+        "lost harbour": 3,
+        "umpokta tribe": 4,
+        "caravan": 5,
+        "mesoai-oasis": 6,
     }
     DUNGEON_LOCATIONS = EXPEDITION_LOCATIONS
 
@@ -734,7 +734,7 @@ class GladiatusBot:
                 logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
             return False
 
-    def attempt_dungeon_if_ready(self, dungeon_location="1", dungeon_difficulty="Normal", logger_callback=None):
+    def attempt_dungeon_if_ready(self, dungeon_location="Voodoo Temple", dungeon_difficulty="Normal", logger_callback=None):
         """If dungeon cooldown indicates ready, navigate and click a random attack.
         Returns dict with result."""
         info = {"clicked": False, "message": ""}
@@ -987,7 +987,7 @@ class GladiatusBot:
                 logger_callback(info["message"])
             return info
 
-    def attempt_expedition_if_ready(self, expedition_location="Grimwood", expedition_target=1, logger_callback=None):
+    def attempt_expedition_if_ready(self, expedition_location="Voodoo Temple", expedition_target=1, logger_callback=None):
         """Check cooldown bar; if ready and attempts > 0 perform one expedition click.
         Returns a dict describing the single click attempt."""
         info = {"clicked": False, "attempts_before": None, "attempts_after": None, "message": ""}
@@ -1083,7 +1083,7 @@ class GladiatusBot:
                 if normalized == label:
                     return label, loc
 
-        return "grimwood", self.EXPEDITION_LOCATIONS["grimwood"]
+        return "voodoo temple", self.EXPEDITION_LOCATIONS["voodoo temple"]
 
     def open_country_map(self, logger_callback=None):
         """Open the country map submenu from the main menu."""
@@ -1802,7 +1802,7 @@ class GladiatusBot:
                 if normalized == label:
                     return label, loc
 
-        return "grimwood", self.DUNGEON_LOCATIONS["grimwood"]
+        return "voodoo temple", self.DUNGEON_LOCATIONS["voodoo temple"]
 
     def _normalize_dungeon_difficulty(self, dungeon_difficulty):
         if isinstance(dungeon_difficulty, str):
