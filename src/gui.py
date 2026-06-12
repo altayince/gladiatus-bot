@@ -540,6 +540,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "39", "issue_title": "Fix custom header window behavior on Windows", "summary": "Windows'ta custom header korunurken acilis flash'i, minimize, maximize ve Alt+Tab/taskbar gorunurlugu duzeltildi."},
             {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
             {"issue_number": "32", "issue_title": "Handle Daily Bonus overlay", "summary": "Login sonrası Daily Bonus popup'i close_overlays akishina eklendi; Collect Bonus dialogu botu kilitlemeden kapatiliyor."},
             {"issue_number": "30", "issue_title": "Fix collapsed controls regression in premium GUI", "summary": "Custom button ve dropdown wrapper'larinin coktugu regress duzeltildi; login/CAPTCHA ile play/stop butonlari geri geldi, lokasyon dropdown'lari yeniden gorunur oldu, acik dropdown'lar scroll sirasinda kapanir hale getirildi ve sag kolon hizasi toparlandi."},
