@@ -1845,15 +1845,28 @@ class GladiatusGUI:
             pass
 
     def _bind_mousewheel(self, canvas):
+        def _scroll_open_dropdown(delta_units, x_root, y_root):
+            for dropdown in self._registered_dropdowns:
+                popup = getattr(dropdown, "popup", None)
+                if not popup or not popup.winfo_exists():
+                    continue
+                px = popup.winfo_rootx()
+                py = popup.winfo_rooty()
+                pw = popup.winfo_width()
+                ph = popup.winfo_height()
+                if px <= x_root <= px + pw and py <= y_root <= py + ph:
+                    return dropdown._scroll_popup(delta_units)
+            return False
+
         def _on_mousewheel(event):
-            widget = event.widget
-            dropdown_owner = getattr(widget, "_dropdown_owner", None)
-            if dropdown_owner and dropdown_owner._scroll_popup(-1 * int(event.delta / 120)):
+            delta_units = -1 * int(event.delta / 120)
+            x_root, y_root = event.x_root, event.y_root
+            if _scroll_open_dropdown(delta_units, x_root, y_root):
                 return "break"
+            widget = event.widget
             if not (self._has_ancestor(widget, ThemedDropdown) or hasattr(widget, "_dropdown_owner")):
                 self._close_all_dropdowns()
-            delta = -1 * int(event.delta / 120)
-            canvas.yview_scroll(delta, "units")
+            canvas.yview_scroll(delta_units, "units")
             return "break"
 
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
