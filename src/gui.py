@@ -513,6 +513,9 @@ class GladiatusGUI:
         self._drag_window_offset = None
         self._drag_started_maximized = False
         self._top_snap_armed = False
+        self._last_minimize_target = None
+        self._pending_restore_from_minimize = False
+        self._show_root_after_transition = False
 
         self.bot = None
         self.login_thread = None
@@ -957,6 +960,11 @@ class GladiatusGUI:
             self.root.overrideredirect(True)
             if sys.platform.startswith("win"):
                 self._refresh_windows_appwindow()
+                if not self._pending_restore_from_minimize:
+                    try:
+                        self.root.attributes("-alpha", 1.0)
+                    except Exception:
+                        pass
             return
 
         if not sys.platform.startswith("win"):
@@ -968,6 +976,11 @@ class GladiatusGUI:
             self.root.update_idletasks()
             self._refresh_windows_appwindow()
             self.root.overrideredirect(True)
+            if not self._pending_restore_from_minimize:
+                try:
+                    self.root.attributes("-alpha", 1.0)
+                except Exception:
+                    pass
             if self._defer_initial_show:
                 self.root.after(0, self.root.deiconify)
                 self._defer_initial_show = False
@@ -998,6 +1011,10 @@ class GladiatusGUI:
             0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
         )
+
+    def _show_window_native(self, cmd_show):
+        hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
+        ctypes.windll.user32.ShowWindow(hwnd, cmd_show)
 
     def _bind_window_drag(self, widget):
         widget.bind("<ButtonPress-1>", self._start_window_drag, add="+")
@@ -1084,11 +1101,7 @@ class GladiatusGUI:
         self._was_maximized_before_minimize = self._is_maximized
         if sys.platform.startswith("win"):
             try:
-                self.root.update_idletasks()
-                self._refresh_windows_appwindow()
-                hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-                SW_MINIMIZE = 6
-                ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
+                self._animate_minimize_to_taskbar()
                 return
             except Exception:
                 pass
@@ -1099,8 +1112,31 @@ class GladiatusGUI:
             self.root.after(20, self._restore_after_map)
 
     def _restore_after_map(self):
+        if self._pending_restore_from_minimize and sys.platform.startswith("win"):
+            try:
+                self.root.attributes("-alpha", 0.0)
+            except Exception:
+                pass
+            try:
+                SW_HIDE = 0
+                self._show_window_native(SW_HIDE)
+            except Exception:
+                pass
         self._enable_custom_window_chrome()
-        if self._was_maximized_before_minimize:
+        if self._pending_restore_from_minimize and sys.platform.startswith("win"):
+            if self._was_maximized_before_minimize:
+                target = self._get_work_area_geometry()
+                self._is_maximized = True
+            elif self._restore_geometry:
+                target = self._parse_geometry(self._restore_geometry)
+                self._is_maximized = False
+            else:
+                target = self._current_geometry_tuple()
+                self._is_maximized = False
+            self._paint_window_control(self.maximize_btn, self.PANEL_ALT, self.MUTED)
+            self._pending_restore_from_minimize = False
+            self.root.after(20, lambda target_geometry=target: self._animate_restore_from_taskbar(target_geometry))
+        elif self._was_maximized_before_minimize:
             self.root.after(20, self._reapply_maximized_geometry)
         self._was_maximized_before_minimize = False
 
@@ -1171,31 +1207,36 @@ class GladiatusGUI:
         end_x, end_y, end_w, end_h = target
         end = (end_x, end_y, end_w, end_h)
 
-        if start == end or not sys.platform.startswith("win"):
+        if start == end:
             self.root.geometry(f"{end_w}x{end_h}+{end_x}+{end_y}")
             if sys.platform.startswith("win"):
                 self.root.after(0, self._refresh_windows_appwindow)
-            self._animate_window_settle()
             return
 
-        try:
-            self._run_shell_transition(start, end)
-        except Exception:
-            self._destroy_transition_overlay()
+        if not sys.platform.startswith("win"):
             self.root.geometry(f"{end_w}x{end_h}+{end_x}+{end_y}")
-            self._animate_window_settle()
+            return
+
+        self._run_shell_transition(start, end)
 
     def _animate_window_settle(self):
         try:
-            self.root.attributes("-alpha", 0.985)
+            if self._window_transition is not None:
+                self.root.after_cancel(self._window_transition)
+                self._window_transition = None
+        except Exception:
+            self._window_transition = None
+
+        try:
+            self.root.attributes("-alpha", 0.84)
         except Exception:
             return
 
-        steps = 2
-        duration = 45
+        steps = 5
+        frame_ms = 12
 
         def _step(index):
-            alpha = 0.985 + ((1.0 - 0.985) * (index / steps))
+            alpha = 0.84 + ((1.0 - 0.84) * (index / steps))
             try:
                 self.root.attributes("-alpha", alpha)
             except Exception:
@@ -1203,7 +1244,7 @@ class GladiatusGUI:
                 return
 
             if index < steps:
-                self._window_transition = self.root.after(duration // steps, lambda: _step(index + 1))
+                self._window_transition = self.root.after(frame_ms, lambda: _step(index + 1))
             else:
                 try:
                     self.root.attributes("-alpha", 1.0)
@@ -1273,8 +1314,8 @@ class GladiatusGUI:
 
     def _run_shell_transition(self, start, end):
         self._ensure_transition_overlay()
-        steps = 6
-        duration = 96
+        steps = 10
+        duration = 140
 
         if self._transition_overlay and self._transition_overlay.winfo_exists():
             self._transition_overlay.geometry(f"{start[2]}x{start[3]}+{start[0]}+{start[1]}")
@@ -1282,10 +1323,14 @@ class GladiatusGUI:
                 self._transition_overlay.update_idletasks()
             except Exception:
                 pass
+        try:
+            self.root.attributes("-alpha", 0.0)
+        except Exception:
+            pass
 
         def _step(index):
             t = index / steps
-            eased = 1 - ((1 - t) ** 3)
+            eased = 1 - ((1 - t) ** 4)
             x = round(start[0] + ((end[0] - start[0]) * eased))
             y = round(start[1] + ((end[1] - start[1]) * eased))
             width = round(start[2] + ((end[2] - start[2]) * eased))
@@ -1297,18 +1342,88 @@ class GladiatusGUI:
             if index < steps:
                 self._window_transition = self.root.after(duration // steps, lambda: _step(index + 1))
             else:
-                try:
-                    self.root.attributes("-alpha", 0.985)
-                except Exception:
-                    pass
                 self.root.geometry(f"{end[2]}x{end[3]}+{end[0]}+{end[1]}")
                 self.root.update_idletasks()
                 self._destroy_transition_overlay()
                 self._window_transition = None
                 self.root.after(0, self._refresh_windows_appwindow)
+                if self._show_root_after_transition and sys.platform.startswith("win"):
+                    try:
+                        SW_SHOW = 5
+                        self._show_window_native(SW_SHOW)
+                    except Exception:
+                        pass
+                    self._show_root_after_transition = False
                 self._animate_window_settle()
 
         _step(1)
+
+    def _animate_minimize_to_taskbar(self):
+        self.root.update_idletasks()
+        start = self._current_geometry_tuple()
+        work_x, work_y, work_width, work_height = self._get_work_area_geometry()
+        target_width = max(220, round(start[2] * 0.42))
+        target_height = max(56, round(start[3] * 0.18))
+        target_x = work_x + ((work_width - target_width) // 2)
+        target_y = work_y + work_height - target_height - 6
+        end = (target_x, target_y, target_width, target_height)
+        self._last_minimize_target = end
+        self._pending_restore_from_minimize = True
+
+        self._ensure_transition_overlay()
+        if self._transition_overlay and self._transition_overlay.winfo_exists():
+            self._transition_overlay.geometry(f"{start[2]}x{start[3]}+{start[0]}+{start[1]}")
+        try:
+            self.root.attributes("-alpha", 0.0)
+        except Exception:
+            pass
+
+        steps = 9
+        duration = 125
+
+        def _step(index):
+            t = index / steps
+            eased = 1 - ((1 - t) ** 4)
+            x = round(start[0] + ((end[0] - start[0]) * eased))
+            y = round(start[1] + ((end[1] - start[1]) * eased))
+            width = round(start[2] + ((end[2] - start[2]) * eased))
+            height = round(start[3] + ((end[3] - start[3]) * eased))
+
+            if self._transition_overlay and self._transition_overlay.winfo_exists():
+                self._transition_overlay.geometry(f"{width}x{height}+{x}+{y}")
+
+            if index < steps:
+                self._window_transition = self.root.after(duration // steps, lambda: _step(index + 1))
+            else:
+                self._destroy_transition_overlay()
+                self._window_transition = None
+                self._refresh_windows_appwindow()
+                SW_MINIMIZE = 6
+                self._show_window_native(SW_MINIMIZE)
+                self.root.after(30, self._enable_custom_window_chrome)
+
+        _step(1)
+
+    def _animate_restore_from_taskbar(self, target):
+        if not self._last_minimize_target:
+            self.root.geometry(f"{target[2]}x{target[3]}+{target[0]}+{target[1]}")
+            self.root.after(0, self._refresh_windows_appwindow)
+            self._pending_restore_from_minimize = False
+            try:
+                SW_SHOW = 5
+                self._show_window_native(SW_SHOW)
+            except Exception:
+                pass
+            self._animate_window_settle()
+            return
+
+        start = self._last_minimize_target
+        self.root.geometry(f"{target[2]}x{target[3]}+{target[0]}+{target[1]}")
+        self.root.update_idletasks()
+        self._show_root_after_transition = True
+        self._run_shell_transition(start, target)
+        self._last_minimize_target = None
+        self._pending_restore_from_minimize = False
 
     def _get_work_area_geometry(self):
         if sys.platform.startswith("win"):
