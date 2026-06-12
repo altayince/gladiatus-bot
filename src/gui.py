@@ -968,16 +968,12 @@ class GladiatusGUI:
         SWP_NOSIZE = 0x0001
         SWP_NOZORDER = 0x0004
         SWP_FRAMECHANGED = 0x0020
-        SW_HIDE = 0
-        SW_SHOW = 5
 
         style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
         style = style & ~WS_EX_TOOLWINDOW
         style = style | WS_EX_APPWINDOW
         ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
         ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
-        ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
-        ctypes.windll.user32.ShowWindow(hwnd, SW_SHOW)
 
     def _enable_custom_window_chrome(self):
         if not sys.platform.startswith("win"):
