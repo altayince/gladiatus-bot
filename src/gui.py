@@ -951,39 +951,42 @@ class GladiatusGUI:
             except Exception:
                 pass
 
-    def _enable_custom_window_chrome(self):
-        if self._chrome_initialized:
-            self.root.overrideredirect(True)
+    def _apply_windows_appwindow_style(self):
+        if not sys.platform.startswith("win"):
             return
 
+        self.root.update_idletasks()
+        hwnd = self.root.winfo_id()
+        parent_hwnd = ctypes.windll.user32.GetParent(hwnd)
+        if parent_hwnd:
+            hwnd = parent_hwnd
+
+        GWL_EXSTYLE = -20
+        WS_EX_APPWINDOW = 0x00040000
+        WS_EX_TOOLWINDOW = 0x00000080
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_FRAMECHANGED = 0x0020
+        SW_HIDE = 0
+        SW_SHOW = 5
+
+        style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+        style = style & ~WS_EX_TOOLWINDOW
+        style = style | WS_EX_APPWINDOW
+        ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+        ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+        ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
+        ctypes.windll.user32.ShowWindow(hwnd, SW_SHOW)
+
+    def _enable_custom_window_chrome(self):
         if not sys.platform.startswith("win"):
             self._chrome_initialized = True
             self.root.overrideredirect(True)
             return
 
         try:
-            self.root.update_idletasks()
-            hwnd = self.root.winfo_id()
-            parent_hwnd = ctypes.windll.user32.GetParent(hwnd)
-            if parent_hwnd:
-                hwnd = parent_hwnd
-            GWL_EXSTYLE = -20
-            WS_EX_APPWINDOW = 0x00040000
-            WS_EX_TOOLWINDOW = 0x00000080
-            SWP_NOMOVE = 0x0002
-            SWP_NOSIZE = 0x0001
-            SWP_NOZORDER = 0x0004
-            SWP_FRAMECHANGED = 0x0020
-            SW_HIDE = 0
-            SW_SHOW = 5
-
-            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            style = style & ~WS_EX_TOOLWINDOW
-            style = style | WS_EX_APPWINDOW
-            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
-            ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
-            ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
-            ctypes.windll.user32.ShowWindow(hwnd, SW_SHOW)
+            self._apply_windows_appwindow_style()
             self.root.overrideredirect(True)
             self.root.lift()
             self._chrome_initialized = True
@@ -1098,6 +1101,8 @@ class GladiatusGUI:
         try:
             if not self._is_maximized:
                 self._restore_geometry = self.root.geometry()
+            self.root.overrideredirect(True)
+            self._apply_windows_appwindow_style()
             self.root.update_idletasks()
             x, y, width, height = self._get_work_area_geometry()
             self._animate_to_geometry((x, y, width, height))
@@ -1108,6 +1113,8 @@ class GladiatusGUI:
 
     def _restore_window(self):
         try:
+            self.root.overrideredirect(True)
+            self._apply_windows_appwindow_style()
             if self._restore_geometry:
                 self._animate_to_geometry(self._parse_geometry(self._restore_geometry))
             self._is_maximized = False
@@ -1117,6 +1124,8 @@ class GladiatusGUI:
 
     def _reapply_maximized_geometry(self):
         try:
+            self.root.overrideredirect(True)
+            self._apply_windows_appwindow_style()
             x, y, width, height = self._get_work_area_geometry()
             self.root.geometry(f"{width}x{height}+{x}+{y}")
             self._is_maximized = True
