@@ -225,30 +225,66 @@ class ThemedDropdown(tk.Frame):
         inner.pack(fill="both", expand=True, padx=1, pady=1)
         self.popup_inner = inner
 
-        for idx, option in enumerate(self.values):
-            row = tk.Label(
-                inner,
-                text=option,
-                bg=self.panel_color,
-                fg=self.text_color,
-                font=("Segoe UI", 10),
-                anchor="w",
-                padx=12,
-                pady=9,
-                cursor="hand2",
-            )
-            row._dropdown_owner = self
-            row.pack(fill="x")
-            row.bind("<Enter>", lambda _e, item=row: item.configure(bg="#162131", fg=self.accent_color))
-            row.bind("<Leave>", lambda _e, item=row: item.configure(bg=self.panel_color, fg=self.text_color))
-            row.bind("<Button-1>", lambda _e, value=option: self._select_option(value))
+        list_frame = tk.Frame(inner, bg=self.panel_color)
+        list_frame.pack(fill="both", expand=True)
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
 
-            if idx < len(self.values) - 1:
-                separator = tk.Frame(inner, bg=self.border_color, height=1)
-                separator._dropdown_owner = self
-                separator.pack(fill="x")
+        visible_rows = min(max(len(self.values), 1), 8)
+        listbox = tk.Listbox(
+            list_frame,
+            height=visible_rows,
+            activestyle="none",
+            exportselection=False,
+            selectmode="browse",
+            bg=self.panel_color,
+            fg=self.text_color,
+            selectbackground="#162131",
+            selectforeground=self.accent_color,
+            highlightthickness=0,
+            borderwidth=0,
+            relief="flat",
+            font=("Segoe UI", 10),
+        )
+        listbox.grid(row=0, column=0, sticky="nsew")
 
-        self.popup.configure(height=(len(self.values) * 38) + 2)
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=listbox.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        listbox.configure(yscrollcommand=scrollbar.set)
+
+        for option in self.values:
+            listbox.insert("end", option)
+
+        def _choose_selected(_event=None):
+            selection = listbox.curselection()
+            if selection:
+                self._select_option(listbox.get(selection[0]))
+            return "break"
+
+        def _hover_select(event):
+            index = listbox.nearest(event.y)
+            if index >= 0:
+                listbox.selection_clear(0, "end")
+                listbox.selection_set(index)
+                listbox.activate(index)
+
+        def _on_mousewheel(event):
+            delta = -1 * int(event.delta / 120)
+            listbox.yview_scroll(delta, "units")
+            return "break"
+
+        listbox.bind("<Button-1>", _hover_select)
+        listbox.bind("<ButtonRelease-1>", _choose_selected)
+        listbox.bind("<Double-Button-1>", _choose_selected)
+        listbox.bind("<Return>", _choose_selected)
+        listbox.bind("<MouseWheel>", _on_mousewheel)
+
+        if self.variable.get() in self.values:
+            current_index = self.values.index(self.variable.get())
+            listbox.selection_set(current_index)
+            listbox.see(current_index)
+
+        self.popup.configure(height=(visible_rows * 30) + 2)
 
     def _select_option(self, value):
         self.variable.set(value)
@@ -463,7 +499,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
+            {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
             {"issue_number": "32", "issue_title": "Handle Daily Bonus overlay", "summary": "Login sonrası Daily Bonus popup'i close_overlays akishina eklendi; Collect Bonus dialogu botu kilitlemeden kapatiliyor."},
             {"issue_number": "30", "issue_title": "Fix collapsed controls regression in premium GUI", "summary": "Custom button ve dropdown wrapper'larinin coktugu regress duzeltildi; login/CAPTCHA ile play/stop butonlari geri geldi, lokasyon dropdown'lari yeniden gorunur oldu, acik dropdown'lar scroll sirasinda kapanir hale getirildi ve sag kolon hizasi toparlandi."},
             {"issue_number": "25", "issue_title": "Premium GUI refresh", "summary": "Arayuz daha elit bir control suite hissi verecek sekilde yeniden tasarlandi; vitrin alani, durum kartlari, daha guclu tipografi ve premium panel hiyerarsisi eklendi."},
