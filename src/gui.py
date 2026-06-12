@@ -539,7 +539,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "36", "issue_title": "Fix taskbar visibility for custom window chrome", "summary": "Custom window chrome acik durumda Windows taskbar'da gorunur kalacak sekilde sadeleştirildi; startup'taki withdraw/deiconify dongusu kaldirildi."},
+            {"issue_number": "36", "issue_title": "Fix taskbar visibility for custom window chrome", "summary": "Windows taskbar gorunurlugu dogru HWND uzerine tasindi; startup'taki withdraw/deiconify dongusu kaldirildi ve custom chrome acik kalirken ikonun gorunmesi hedeflendi."},
             {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
             {"issue_number": "32", "issue_title": "Handle Daily Bonus overlay", "summary": "Login sonrası Daily Bonus popup'i close_overlays akishina eklendi; Collect Bonus dialogu botu kilitlemeden kapatiliyor."},
             {"issue_number": "30", "issue_title": "Fix collapsed controls regression in premium GUI", "summary": "Custom button ve dropdown wrapper'larinin coktugu regress duzeltildi; login/CAPTCHA ile play/stop butonlari geri geldi, lokasyon dropdown'lari yeniden gorunur oldu, acik dropdown'lar scroll sirasinda kapanir hale getirildi ve sag kolon hizasi toparlandi."},
@@ -963,7 +963,10 @@ class GladiatusGUI:
 
         try:
             self.root.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
+            hwnd = self.root.winfo_id()
+            parent_hwnd = ctypes.windll.user32.GetParent(hwnd)
+            if parent_hwnd:
+                hwnd = parent_hwnd
             GWL_EXSTYLE = -20
             WS_EX_APPWINDOW = 0x00040000
             WS_EX_TOOLWINDOW = 0x00000080
@@ -971,12 +974,16 @@ class GladiatusGUI:
             SWP_NOSIZE = 0x0001
             SWP_NOZORDER = 0x0004
             SWP_FRAMECHANGED = 0x0020
+            SW_HIDE = 0
+            SW_SHOW = 5
 
             style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
             style = style & ~WS_EX_TOOLWINDOW
             style = style | WS_EX_APPWINDOW
             ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
             ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+            ctypes.windll.user32.ShowWindow(hwnd, SW_HIDE)
+            ctypes.windll.user32.ShowWindow(hwnd, SW_SHOW)
             self.root.overrideredirect(True)
             self.root.lift()
             self._chrome_initialized = True
