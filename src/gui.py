@@ -323,6 +323,12 @@ class ThemedDropdown(tk.Frame):
         self.variable.set(value)
         self._close_popup()
 
+    def _scroll_popup(self, delta_units):
+        if self.popup_canvas and self.popup_canvas.winfo_exists():
+            self.popup_canvas.yview_scroll(delta_units, "units")
+            return True
+        return False
+
     def _close_popup(self):
         if self.popup and self.popup.winfo_exists():
             self.popup.place_forget()
@@ -1841,10 +1847,14 @@ class GladiatusGUI:
     def _bind_mousewheel(self, canvas):
         def _on_mousewheel(event):
             widget = event.widget
+            dropdown_owner = getattr(widget, "_dropdown_owner", None)
+            if dropdown_owner and dropdown_owner._scroll_popup(-1 * int(event.delta / 120)):
+                return "break"
             if not (self._has_ancestor(widget, ThemedDropdown) or hasattr(widget, "_dropdown_owner")):
                 self._close_all_dropdowns()
             delta = -1 * int(event.delta / 120)
             canvas.yview_scroll(delta, "units")
+            return "break"
 
         canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
