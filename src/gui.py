@@ -400,6 +400,13 @@ class GladiatusGUI:
     DANGER = "#ff6f91"
 
     EXPEDITION_LOCATIONS = [
+        ("Grimwood", "0"),
+        ("Pirate Harbour", "1"),
+        ("Misty Mountains", "2"),
+        ("Wolf Cave", "3"),
+        ("Ancient Temple", "4"),
+        ("Barbarian Village", "5"),
+        ("Bandit Camp", "6"),
         ("Voodoo Temple", "0"),
         ("Bridge", "1"),
         ("Blood Cave", "2"),
@@ -451,12 +458,12 @@ class GladiatusGUI:
         self.recovery_buy_refill_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
         self.recovery_threshold_var = tk.StringVar(value="10")
-        self.expedition_location_var = tk.StringVar(value="Voodoo Temple")
+        self.expedition_location_var = tk.StringVar(value="Grimwood")
         self.expedition_target_var = tk.StringVar(value="1")
-        self.dungeon_location_var = tk.StringVar(value="Voodoo Temple")
+        self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
-            {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri yeni submenu lokasyonlariyla guncellendi; Hermit ve Rise of the Forgotten hariç aktif lokasyonlar dropdown'lara tasindi."},
+            {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
             {"issue_number": "32", "issue_title": "Handle Daily Bonus overlay", "summary": "Login sonrası Daily Bonus popup'i close_overlays akishina eklendi; Collect Bonus dialogu botu kilitlemeden kapatiliyor."},
             {"issue_number": "30", "issue_title": "Fix collapsed controls regression in premium GUI", "summary": "Custom button ve dropdown wrapper'larinin coktugu regress duzeltildi; login/CAPTCHA ile play/stop butonlari geri geldi, lokasyon dropdown'lari yeniden gorunur oldu, acik dropdown'lar scroll sirasinda kapanir hale getirildi ve sag kolon hizasi toparlandi."},
             {"issue_number": "25", "issue_title": "Premium GUI refresh", "summary": "Arayuz daha elit bir control suite hissi verecek sekilde yeniden tasarlandi; vitrin alani, durum kartlari, daha guclu tipografi ve premium panel hiyerarsisi eklendi."},
@@ -1531,7 +1538,7 @@ class GladiatusGUI:
         ttk.Label(panel, text="Expedition Location", style="CardTitle.TLabel").grid(row=0, column=0, sticky="w")
         ttk.Label(
             panel,
-            text="Hermit ve Rise of the Forgotten haric country map uzerindeki lokasyonlardan birini sec.",
+            text="Hermit ve Rise of the Forgotten haric country map uzerindeki eski ve yeni lokasyonlardan birini sec.",
             style="Muted.TLabel",
         ).grid(row=1, column=0, sticky="w", pady=(4, 12))
 
@@ -1858,13 +1865,13 @@ class GladiatusGUI:
             recovery_threshold = data.get("recovery_threshold", "10")
             self.recovery_threshold_var.set(str(recovery_threshold))
 
-            expedition_location = data.get("expedition_location", "Voodoo Temple")
+            expedition_location = data.get("expedition_location", "Grimwood")
             self.expedition_location_var.set(self._coerce_expedition_location(expedition_location))
 
             expedition_target = data.get("expedition_target", "1")
             self.expedition_target_var.set(str(self._coerce_expedition_target(expedition_target)))
 
-            dungeon_location = data.get("dungeon_location", "Voodoo Temple")
+            dungeon_location = data.get("dungeon_location", "Grimwood")
             self.dungeon_location_var.set(self._coerce_dungeon_location(dungeon_location))
 
             dungeon_difficulty = data.get("dungeon_difficulty", "Normal")

@@ -17,6 +17,13 @@ logging.basicConfig(level=logging.INFO)
 
 class GladiatusBot:
     EXPEDITION_LOCATIONS = {
+        "grimwood": 0,
+        "pirate harbour": 1,
+        "misty mountains": 2,
+        "wolf cave": 3,
+        "ancient temple": 4,
+        "barbarian village": 5,
+        "bandit camp": 6,
         "voodoo temple": 0,
         "bridge": 1,
         "blood cave": 2,
@@ -1083,7 +1090,7 @@ class GladiatusBot:
                 if normalized == label:
                     return label, loc
 
-        return "voodoo temple", self.EXPEDITION_LOCATIONS["voodoo temple"]
+        return "grimwood", self.EXPEDITION_LOCATIONS["grimwood"]
 
     def open_country_map(self, logger_callback=None):
         """Open the country map submenu from the main menu."""
@@ -1802,7 +1809,7 @@ class GladiatusBot:
                 if normalized == label:
                     return label, loc
 
-        return "voodoo temple", self.DUNGEON_LOCATIONS["voodoo temple"]
+        return "grimwood", self.DUNGEON_LOCATIONS["grimwood"]
 
     def _normalize_dungeon_difficulty(self, dungeon_difficulty):
         if isinstance(dungeon_difficulty, str):
