@@ -568,7 +568,7 @@ class GladiatusGUI:
         self._refresh_overview()
         self._bind_focus_dismissal()
         self.root.bind("<Map>", self._on_window_map, add="+")
-        self.root.after_idle(self._enable_custom_window_chrome)
+        self.root.after(250, self._enable_custom_window_chrome)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _configure_styles(self):
@@ -1078,6 +1078,8 @@ class GladiatusGUI:
         self.root.iconify()
 
     def _on_window_map(self, _event=None):
+        if not self._chrome_initialized:
+            return
         if str(self.root.state()) == "normal":
             self.root.after(20, self._restore_after_map)
 
