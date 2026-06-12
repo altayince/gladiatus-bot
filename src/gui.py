@@ -500,7 +500,7 @@ class GladiatusGUI:
         self.root.geometry("1320x860")
         self.root.minsize(1140, 760)
         self.root.configure(bg=self.BG)
-        self.root.overrideredirect(True)
+        self.root.overrideredirect(False)
         self._chrome_initialized = False
         self._drag_origin = None
         self._is_maximized = False
@@ -568,7 +568,7 @@ class GladiatusGUI:
         self._refresh_overview()
         self._bind_focus_dismissal()
         self.root.bind("<Map>", self._on_window_map, add="+")
-        self.root.after(30, self._enable_custom_window_chrome)
+        self.root.after_idle(self._enable_custom_window_chrome)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
     def _configure_styles(self):
@@ -982,8 +982,10 @@ class GladiatusGUI:
             return
 
         try:
+            self.root.update_idletasks()
             self._apply_windows_appwindow_style()
             self.root.overrideredirect(True)
+            self.root.deiconify()
             self.root.lift()
             self._chrome_initialized = True
         except Exception:
