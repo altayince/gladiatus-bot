@@ -227,6 +227,7 @@ class ThemedDropdown(tk.Frame):
         self.popup_inner = inner
 
         list_frame = tk.Frame(inner, bg=self.panel_color)
+        list_frame._dropdown_owner = self
         list_frame.pack(fill="both", expand=True)
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
@@ -241,10 +242,12 @@ class ThemedDropdown(tk.Frame):
             bd=0,
             relief="flat",
         )
+        canvas._dropdown_owner = self
         canvas.grid(row=0, column=0, sticky="nsew")
         self.popup_canvas = canvas
 
         scroll_host = tk.Frame(list_frame, bg=self.panel_color, width=18)
+        scroll_host._dropdown_owner = self
         scroll_host.grid(row=0, column=1, sticky="ns", padx=(8, 0))
         scroll_host.grid_propagate(False)
 
@@ -261,6 +264,7 @@ class ThemedDropdown(tk.Frame):
             thumb_hover_color=self.accent_color,
             width=18,
         )
+        scrollbar._dropdown_owner = self
         scrollbar.pack(fill="y", expand=True)
         canvas.configure(yscrollcommand=scrollbar.set)
 
@@ -1836,7 +1840,9 @@ class GladiatusGUI:
 
     def _bind_mousewheel(self, canvas):
         def _on_mousewheel(event):
-            self._close_all_dropdowns()
+            widget = event.widget
+            if not (self._has_ancestor(widget, ThemedDropdown) or hasattr(widget, "_dropdown_owner")):
+                self._close_all_dropdowns()
             delta = -1 * int(event.delta / 120)
             canvas.yview_scroll(delta, "units")
 
