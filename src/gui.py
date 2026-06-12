@@ -501,6 +501,7 @@ class GladiatusGUI:
         self.root.minsize(1140, 760)
         self.root.configure(bg=self.BG)
         self.root.overrideredirect(True)
+        self._defer_initial_show = sys.platform.startswith("win")
         self._chrome_initialized = False
         self._drag_origin = None
         self._is_maximized = False
@@ -953,6 +954,8 @@ class GladiatusGUI:
     def _enable_custom_window_chrome(self):
         if self._chrome_initialized:
             self.root.overrideredirect(True)
+            if sys.platform.startswith("win"):
+                self._refresh_windows_appwindow()
             return
 
         if not sys.platform.startswith("win"):
@@ -962,26 +965,38 @@ class GladiatusGUI:
 
         try:
             self.root.update_idletasks()
-            hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-            GWL_EXSTYLE = -20
-            WS_EX_APPWINDOW = 0x00040000
-            WS_EX_TOOLWINDOW = 0x00000080
-            SWP_NOMOVE = 0x0002
-            SWP_NOSIZE = 0x0001
-            SWP_NOZORDER = 0x0004
-            SWP_FRAMECHANGED = 0x0020
-
-            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
-            style = style & ~WS_EX_TOOLWINDOW
-            style = style | WS_EX_APPWINDOW
-            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
-            ctypes.windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)
+            self._refresh_windows_appwindow()
             self.root.overrideredirect(True)
-            self.root.withdraw()
-            self.root.after(10, self.root.deiconify)
+            if self._defer_initial_show:
+                self.root.after(0, self.root.deiconify)
+                self._defer_initial_show = False
             self._chrome_initialized = True
         except Exception:
             self.root.overrideredirect(False)
+
+    def _refresh_windows_appwindow(self):
+        hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
+        GWL_EXSTYLE = -20
+        WS_EX_APPWINDOW = 0x00040000
+        WS_EX_TOOLWINDOW = 0x00000080
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_FRAMECHANGED = 0x0020
+
+        style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+        style = style & ~WS_EX_TOOLWINDOW
+        style = style | WS_EX_APPWINDOW
+        ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, style)
+        ctypes.windll.user32.SetWindowPos(
+            hwnd,
+            0,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+        )
 
     def _bind_window_drag(self, widget):
         widget.bind("<ButtonPress-1>", self._start_window_drag, add="+")
@@ -1066,7 +1081,16 @@ class GladiatusGUI:
         if not self._restore_geometry or not self._is_maximized:
             self._restore_geometry = self.root.geometry()
         self._was_maximized_before_minimize = self._is_maximized
-        self.root.overrideredirect(False)
+        if sys.platform.startswith("win"):
+            try:
+                self.root.update_idletasks()
+                self._refresh_windows_appwindow()
+                hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
+                SW_MINIMIZE = 6
+                ctypes.windll.user32.ShowWindow(hwnd, SW_MINIMIZE)
+                return
+            except Exception:
+                pass
         self.root.iconify()
 
     def _on_window_map(self, _event=None):
@@ -1095,6 +1119,8 @@ class GladiatusGUI:
             x, y, width, height = self._get_work_area_geometry()
             self._animate_to_geometry((x, y, width, height))
             self._is_maximized = True
+            if sys.platform.startswith("win"):
+                self.root.after(0, self._refresh_windows_appwindow)
             self._paint_window_control(self.maximize_btn, self.PANEL_ALT, self.MUTED)
         except Exception:
             pass
@@ -1104,6 +1130,8 @@ class GladiatusGUI:
             if self._restore_geometry:
                 self._animate_to_geometry(self._parse_geometry(self._restore_geometry))
             self._is_maximized = False
+            if sys.platform.startswith("win"):
+                self.root.after(0, self._refresh_windows_appwindow)
             self._paint_window_control(self.maximize_btn, self.PANEL_ALT, self.MUTED)
         except Exception:
             pass
@@ -1113,6 +1141,8 @@ class GladiatusGUI:
             x, y, width, height = self._get_work_area_geometry()
             self.root.geometry(f"{width}x{height}+{x}+{y}")
             self._is_maximized = True
+            if sys.platform.startswith("win"):
+                self.root.after(0, self._refresh_windows_appwindow)
             self._paint_window_control(self.maximize_btn, self.PANEL_ALT, self.MUTED)
         except Exception:
             pass
@@ -1142,6 +1172,8 @@ class GladiatusGUI:
 
         if start == end or not sys.platform.startswith("win"):
             self.root.geometry(f"{end_w}x{end_h}+{end_x}+{end_y}")
+            if sys.platform.startswith("win"):
+                self.root.after(0, self._refresh_windows_appwindow)
             self._animate_window_settle()
             return
 
@@ -1272,6 +1304,7 @@ class GladiatusGUI:
                 self.root.update_idletasks()
                 self._destroy_transition_overlay()
                 self._window_transition = None
+                self.root.after(0, self._refresh_windows_appwindow)
                 self._animate_window_settle()
 
         _step(1)
@@ -2346,6 +2379,8 @@ class GladiatusGUI:
 
 def run_gui():
     root = tk.Tk()
+    if sys.platform.startswith("win"):
+        root.withdraw()
     gui = GladiatusGUI(root)
     root.mainloop()
 
