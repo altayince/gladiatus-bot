@@ -8,6 +8,13 @@ import sys
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+try:
+    from PIL import Image, ImageGrab, ImageTk
+except ImportError:
+    Image = None
+    ImageGrab = None
+    ImageTk = None
+
 from .config import BASE_URL, GUI_SETTINGS_PATH, PASSWORD, USERNAME
 from .selenium_bot import GladiatusBot
 
@@ -510,12 +517,19 @@ class GladiatusGUI:
         self._window_transition = None
         self._transition_overlay = None
         self._transition_shell = None
+        self._transition_inner = None
+        self._transition_label = None
+        self._transition_photo = None
+        self._transition_snapshot = None
         self._drag_window_offset = None
         self._drag_started_maximized = False
         self._top_snap_armed = False
         self._last_minimize_target = None
+        self._last_minimize_snapshot = None
         self._pending_restore_from_minimize = False
         self._show_root_after_transition = False
+        self._prime_root_during_transition = False
+        self._prime_geometry_during_transition = None
 
         self.bot = None
         self.login_thread = None
@@ -1221,38 +1235,10 @@ class GladiatusGUI:
 
     def _animate_window_settle(self):
         try:
-            if self._window_transition is not None:
-                self.root.after_cancel(self._window_transition)
-                self._window_transition = None
+            self.root.attributes("-alpha", 1.0)
         except Exception:
-            self._window_transition = None
-
-        try:
-            self.root.attributes("-alpha", 0.84)
-        except Exception:
-            return
-
-        steps = 5
-        frame_ms = 12
-
-        def _step(index):
-            alpha = 0.84 + ((1.0 - 0.84) * (index / steps))
-            try:
-                self.root.attributes("-alpha", alpha)
-            except Exception:
-                self._window_transition = None
-                return
-
-            if index < steps:
-                self._window_transition = self.root.after(frame_ms, lambda: _step(index + 1))
-            else:
-                try:
-                    self.root.attributes("-alpha", 1.0)
-                except Exception:
-                    pass
-                self._window_transition = None
-
-        _step(1)
+            pass
+        self._window_transition = None
 
     def _ensure_transition_overlay(self):
         if self._transition_overlay and self._transition_overlay.winfo_exists():
@@ -1283,25 +1269,18 @@ class GladiatusGUI:
         )
         inner.pack(fill="both", expand=True, padx=1, pady=1)
 
-        silhouette_top = tk.Frame(
+        label = tk.Label(
             inner,
-            bg=self.PANEL,
-            height=44,
+            bg=self.PANEL_ALT,
             bd=0,
             highlightthickness=0,
         )
-        silhouette_top.pack(fill="x", side="top")
-
-        silhouette_body = tk.Frame(
-            inner,
-            bg=self.BG,
-            bd=0,
-            highlightthickness=0,
-        )
-        silhouette_body.pack(fill="both", expand=True)
+        label.pack(fill="both", expand=True)
 
         self._transition_overlay = overlay
         self._transition_shell = shell
+        self._transition_inner = inner
+        self._transition_label = label
 
     def _destroy_transition_overlay(self):
         try:
@@ -1311,11 +1290,52 @@ class GladiatusGUI:
             pass
         self._transition_overlay = None
         self._transition_shell = None
+        self._transition_inner = None
+        self._transition_label = None
+        self._transition_photo = None
+        self._transition_snapshot = None
 
-    def _run_shell_transition(self, start, end):
+    def _capture_window_snapshot(self):
+        if ImageGrab is None or not sys.platform.startswith("win"):
+            return None
+        try:
+            self.root.update_idletasks()
+            x, y, width, height = self._current_geometry_tuple()
+            if width <= 2 or height <= 2:
+                return None
+            return ImageGrab.grab(bbox=(x, y, x + width, y + height), all_screens=True)
+        except Exception:
+            return None
+
+    def _prepare_transition_snapshot(self, snapshot=None):
+        if snapshot is not None:
+            self._transition_snapshot = snapshot
+            return
+        self._transition_snapshot = self._capture_window_snapshot()
+
+    def _paint_transition_snapshot(self, width, height):
+        if not self._transition_label or Image is None or ImageTk is None or self._transition_snapshot is None:
+            return
+        try:
+            render_width = max(1, width - 2)
+            render_height = max(1, height - 2)
+            resampling = getattr(getattr(Image, "Resampling", None), "BILINEAR", Image.BILINEAR)
+            resized = self._transition_snapshot.resize(
+                (render_width, render_height),
+                resample=resampling,
+            )
+            photo = ImageTk.PhotoImage(resized)
+            self._transition_photo = photo
+            self._transition_label.configure(image=photo)
+        except Exception:
+            self._transition_photo = None
+            self._transition_label.configure(image="")
+
+    def _run_shell_transition(self, start, end, snapshot=None):
+        self._prepare_transition_snapshot(snapshot)
         self._ensure_transition_overlay()
-        steps = 10
-        duration = 140
+        steps = 14
+        duration = 154
 
         if self._transition_overlay and self._transition_overlay.winfo_exists():
             self._transition_overlay.geometry(f"{start[2]}x{start[3]}+{start[0]}+{start[1]}")
@@ -1323,6 +1343,7 @@ class GladiatusGUI:
                 self._transition_overlay.update_idletasks()
             except Exception:
                 pass
+        self._paint_transition_snapshot(start[2], start[3])
         try:
             self.root.attributes("-alpha", 0.0)
         except Exception:
@@ -1331,6 +1352,7 @@ class GladiatusGUI:
         def _step(index):
             t = index / steps
             eased = 1 - ((1 - t) ** 4)
+            progress = index / steps
             x = round(start[0] + ((end[0] - start[0]) * eased))
             y = round(start[1] + ((end[1] - start[1]) * eased))
             width = round(start[2] + ((end[2] - start[2]) * eased))
@@ -1338,6 +1360,28 @@ class GladiatusGUI:
 
             if self._transition_overlay and self._transition_overlay.winfo_exists():
                 self._transition_overlay.geometry(f"{width}x{height}+{x}+{y}")
+                self._paint_transition_snapshot(width, height)
+
+            # Let the real window wake up slightly before the overlay finishes.
+            # This gives Tk time to render child widgets so the final frame
+            # doesn't feel like the UI appears late.
+            if self._prime_geometry_during_transition is not None and progress >= 0.76:
+                try:
+                    end_x, end_y, end_w, end_h = self._prime_geometry_during_transition
+                    self.root.geometry(f"{end_w}x{end_h}+{end_x}+{end_y}")
+                    self.root.update_idletasks()
+                except Exception:
+                    pass
+                self._prime_geometry_during_transition = None
+
+            if self._show_root_after_transition and self._prime_root_during_transition and progress >= 0.84:
+                try:
+                    SW_SHOW = 5
+                    self._show_window_native(SW_SHOW)
+                    self.root.update_idletasks()
+                except Exception:
+                    pass
+                self._prime_root_during_transition = False
 
             if index < steps:
                 self._window_transition = self.root.after(duration // steps, lambda: _step(index + 1))
@@ -1354,6 +1398,8 @@ class GladiatusGUI:
                     except Exception:
                         pass
                     self._show_root_after_transition = False
+                    self._prime_root_during_transition = False
+                    self._prime_geometry_during_transition = None
                 self._animate_window_settle()
 
         _step(1)
@@ -1361,6 +1407,7 @@ class GladiatusGUI:
     def _animate_minimize_to_taskbar(self):
         self.root.update_idletasks()
         start = self._current_geometry_tuple()
+        self._last_minimize_snapshot = self._capture_window_snapshot()
         work_x, work_y, work_width, work_height = self._get_work_area_geometry()
         target_width = max(220, round(start[2] * 0.42))
         target_height = max(56, round(start[3] * 0.18))
@@ -1370,16 +1417,18 @@ class GladiatusGUI:
         self._last_minimize_target = end
         self._pending_restore_from_minimize = True
 
+        self._prepare_transition_snapshot(self._last_minimize_snapshot)
         self._ensure_transition_overlay()
         if self._transition_overlay and self._transition_overlay.winfo_exists():
             self._transition_overlay.geometry(f"{start[2]}x{start[3]}+{start[0]}+{start[1]}")
+        self._paint_transition_snapshot(start[2], start[3])
         try:
             self.root.attributes("-alpha", 0.0)
         except Exception:
             pass
 
-        steps = 9
-        duration = 125
+        steps = 12
+        duration = 132
 
         def _step(index):
             t = index / steps
@@ -1391,6 +1440,7 @@ class GladiatusGUI:
 
             if self._transition_overlay and self._transition_overlay.winfo_exists():
                 self._transition_overlay.geometry(f"{width}x{height}+{x}+{y}")
+                self._paint_transition_snapshot(width, height)
 
             if index < steps:
                 self._window_transition = self.root.after(duration // steps, lambda: _step(index + 1))
@@ -1409,6 +1459,8 @@ class GladiatusGUI:
             self.root.geometry(f"{target[2]}x{target[3]}+{target[0]}+{target[1]}")
             self.root.after(0, self._refresh_windows_appwindow)
             self._pending_restore_from_minimize = False
+            self._prime_root_during_transition = False
+            self._prime_geometry_during_transition = None
             try:
                 SW_SHOW = 5
                 self._show_window_native(SW_SHOW)
@@ -1421,8 +1473,11 @@ class GladiatusGUI:
         self.root.geometry(f"{target[2]}x{target[3]}+{target[0]}+{target[1]}")
         self.root.update_idletasks()
         self._show_root_after_transition = True
-        self._run_shell_transition(start, target)
+        self._prime_root_during_transition = True
+        self._prime_geometry_during_transition = target
+        self._run_shell_transition(start, target, snapshot=self._last_minimize_snapshot)
         self._last_minimize_target = None
+        self._last_minimize_snapshot = None
         self._pending_restore_from_minimize = False
 
     def _get_work_area_geometry(self):
