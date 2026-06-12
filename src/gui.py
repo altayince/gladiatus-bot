@@ -1016,7 +1016,6 @@ class GladiatusGUI:
     def _show_window_native(self, cmd_show):
         hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
         ctypes.windll.user32.ShowWindow(hwnd, cmd_show)
-
     def _bind_window_drag(self, widget):
         widget.bind("<ButtonPress-1>", self._start_window_drag, add="+")
         widget.bind("<B1-Motion>", self._perform_window_drag, add="+")
