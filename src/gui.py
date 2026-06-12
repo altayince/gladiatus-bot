@@ -154,6 +154,7 @@ class ThemedDropdown(tk.Frame):
         self.height = 56
         self.popup = None
         self.popup_inner = None
+        self.popup_canvas = None
 
         self.face = tk.Frame(self, bg=panel_color, padx=0, pady=0, cursor="hand2")
         self.face.pack(fill="both", expand=True, padx=1, pady=1)
@@ -231,60 +232,88 @@ class ThemedDropdown(tk.Frame):
         list_frame.rowconfigure(0, weight=1)
 
         visible_rows = min(max(len(self.values), 1), 8)
-        listbox = tk.Listbox(
+        popup_height = (visible_rows * 39) + 2
+
+        canvas = tk.Canvas(
             list_frame,
-            height=visible_rows,
-            activestyle="none",
-            exportselection=False,
-            selectmode="browse",
             bg=self.panel_color,
-            fg=self.text_color,
-            selectbackground="#162131",
-            selectforeground=self.accent_color,
             highlightthickness=0,
-            borderwidth=0,
+            bd=0,
             relief="flat",
-            font=("Segoe UI", 10),
         )
-        listbox.grid(row=0, column=0, sticky="nsew")
+        canvas.grid(row=0, column=0, sticky="nsew")
+        self.popup_canvas = canvas
 
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=listbox.yview)
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        listbox.configure(yscrollcommand=scrollbar.set)
+        scroll_host = tk.Frame(list_frame, bg=self.panel_color, width=18)
+        scroll_host.grid(row=0, column=1, sticky="ns", padx=(8, 0))
+        scroll_host.grid_propagate(False)
 
-        for option in self.values:
-            listbox.insert("end", option)
+        option_stack = tk.Frame(canvas, bg=self.panel_color)
+        option_stack._dropdown_owner = self
+        canvas_window = canvas.create_window((0, 0), window=option_stack, anchor="nw")
 
-        def _choose_selected(_event=None):
-            selection = listbox.curselection()
-            if selection:
-                self._select_option(listbox.get(selection[0]))
-            return "break"
+        scrollbar = ModernScrollbar(
+            scroll_host,
+            canvas.yview,
+            bg_color=self.panel_color,
+            track_color=self.border_color,
+            thumb_color=self.accent_color,
+            thumb_hover_color=self.accent_color,
+            width=18,
+        )
+        scrollbar.pack(fill="y", expand=True)
+        canvas.configure(yscrollcommand=scrollbar.set)
 
-        def _hover_select(event):
-            index = listbox.nearest(event.y)
-            if index >= 0:
-                listbox.selection_clear(0, "end")
-                listbox.selection_set(index)
-                listbox.activate(index)
+        def _sync_scrollregion(_event=None):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _sync_width(event):
+            canvas.itemconfigure(canvas_window, width=event.width)
+
+        option_stack.bind("<Configure>", _sync_scrollregion)
+        canvas.bind("<Configure>", _sync_width)
+
+        for idx, option in enumerate(self.values):
+            row = tk.Label(
+                option_stack,
+                text=option,
+                bg=self.panel_color,
+                fg=self.text_color,
+                font=("Segoe UI", 10),
+                anchor="w",
+                padx=12,
+                pady=9,
+                cursor="hand2",
+            )
+            row._dropdown_owner = self
+            row.pack(fill="x")
+            if option == self.variable.get():
+                row.configure(bg="#162131", fg=self.accent_color)
+            row.bind("<Enter>", lambda _e, item=row: item.configure(bg="#162131", fg=self.accent_color))
+            row.bind("<Leave>", lambda _e, item=row, value=option: item.configure(
+                bg="#162131" if value == self.variable.get() else self.panel_color,
+                fg=self.accent_color if value == self.variable.get() else self.text_color,
+            ))
+            row.bind("<Button-1>", lambda _e, value=option: self._select_option(value))
+
+            if idx < len(self.values) - 1:
+                separator = tk.Frame(option_stack, bg=self.border_color, height=1)
+                separator._dropdown_owner = self
+                separator.pack(fill="x")
 
         def _on_mousewheel(event):
             delta = -1 * int(event.delta / 120)
-            listbox.yview_scroll(delta, "units")
+            canvas.yview_scroll(delta, "units")
             return "break"
 
-        listbox.bind("<Button-1>", _hover_select)
-        listbox.bind("<ButtonRelease-1>", _choose_selected)
-        listbox.bind("<Double-Button-1>", _choose_selected)
-        listbox.bind("<Return>", _choose_selected)
-        listbox.bind("<MouseWheel>", _on_mousewheel)
+        for widget in (self.popup, inner, list_frame, canvas, option_stack, scroll_host):
+            widget.bind("<MouseWheel>", _on_mousewheel)
 
         if self.variable.get() in self.values:
             current_index = self.values.index(self.variable.get())
-            listbox.selection_set(current_index)
-            listbox.see(current_index)
+            canvas.yview_moveto(min(1.0, max(0.0, current_index / max(1, len(self.values)))))
 
-        self.popup.configure(height=(visible_rows * 30) + 2)
+        self.popup.configure(height=popup_height)
 
     def _select_option(self, value):
         self.variable.set(value)
@@ -296,6 +325,7 @@ class ThemedDropdown(tk.Frame):
             self.popup.destroy()
         self.popup = None
         self.popup_inner = None
+        self.popup_canvas = None
 
 
 class ThemedButton(tk.Frame):
