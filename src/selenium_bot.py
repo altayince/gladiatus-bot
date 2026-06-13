@@ -329,6 +329,262 @@ class GladiatusBot:
         except Exception:
             return None
 
+    def _emit_log(self, logger_callback, message, level=None):
+        if not logger_callback or not message:
+            return
+        if level:
+            logger_callback({"text": message, "tag": level})
+            return
+        logger_callback(message)
+
+    def _is_battle_report_page(self):
+        try:
+            header = self.driver.find_elements(By.ID, "reportHeader")
+            return any(el.is_displayed() for el in header)
+        except Exception:
+            return False
+
+    def _wait_for_battle_report(self, timeout=10, poll_interval=0.4):
+        return self._wait_for_condition(
+            self._is_battle_report_page,
+            timeout=timeout,
+            poll_interval=poll_interval,
+        )
+
+    def _extract_combatant_stats(self, side_prefix):
+        try:
+            blocks = self.driver.find_elements(By.CSS_SELECTOR, f"div[id^='{side_prefix}CharStats']")
+            visible_block = None
+            for block in blocks:
+                try:
+                    if block.is_displayed():
+                        visible_block = block
+                        break
+                except Exception:
+                    continue
+            if not visible_block:
+                return {}
+
+            block_id = visible_block.get_attribute("id") or ""
+            match = re.search(r"(\d+)$", block_id)
+            avatar_name = None
+            if match:
+                try:
+                    avatar = self.driver.find_element(By.ID, f"{side_prefix}Avatar{match.group(1)}")
+                    avatar_name = (avatar.find_element(By.CSS_SELECTOR, ".playername").text or "").strip()
+                except Exception:
+                    avatar_name = None
+
+            stats = {}
+            rows = visible_block.find_elements(By.CSS_SELECTOR, "div.charstats_bg2")
+            for row in rows:
+                try:
+                    label = None
+                    value = None
+
+                    for selector in (
+                        "span.charstats_text",
+                        "span.charstats_text_mirrored",
+                        "span.charstats_value21",
+                        "span.charstats_value21_mirrored",
+                    ):
+                        els = row.find_elements(By.CSS_SELECTOR, selector)
+                        if els:
+                            label = (els[0].text or "").strip()
+                            if label:
+                                break
+
+                    for selector in (
+                        "span.charstats_value3",
+                        "span.charstats_value3_mirrored",
+                        "span.charstats_value22",
+                        "span.charstats_value22_mirrored",
+                    ):
+                        els = row.find_elements(By.CSS_SELECTOR, selector)
+                        if els:
+                            candidate = (els[-1].text or "").strip()
+                            if candidate:
+                                value = candidate
+                                break
+
+                    if not label:
+                        continue
+                    stats[label] = value or ""
+                except Exception:
+                    continue
+
+            if avatar_name:
+                stats["Name"] = avatar_name
+            return stats
+        except Exception:
+            return {}
+
+    def _parse_reward_summary(self):
+        reward = {}
+        try:
+            reward_box = self.driver.find_elements(By.CSS_SELECTOR, ".report_reward")
+            if not reward_box:
+                return reward
+
+            lines = []
+            for paragraph in reward_box[0].find_elements(By.CSS_SELECTOR, "p"):
+                text = re.sub(r"\s+", " ", (paragraph.text or "")).strip()
+                if text:
+                    lines.append(text)
+                    if "has raided" in text.lower():
+                        reward["gold"] = self._parse_number_from_text(text)
+                    elif "experience point" in text.lower():
+                        reward["experience"] = self._parse_number_from_text(text)
+                    elif "received" in text.lower() and "fame" in text.lower():
+                        reward["fame"] = self._parse_number_from_text(text)
+            if lines:
+                reward["lines"] = lines
+            return reward
+        except Exception:
+            return reward
+
+    def _parse_report_points(self):
+        try:
+            sections = self.driver.find_elements(By.CSS_SELECTOR, "section.standalone")
+            for section in sections:
+                text = re.sub(r"\s+", " ", (section.text or "")).strip()
+                if not text:
+                    continue
+
+                attacker_match = re.search(r"Attacker Points:\s*([\d\.\,]+)", text, re.IGNORECASE)
+                defender_match = re.search(r"Defender Points:\s*([\d\.\,]+)", text, re.IGNORECASE)
+                if not attacker_match and not defender_match:
+                    continue
+
+                points = {"text": text}
+                if attacker_match:
+                    points["attacker"] = self._parse_number_from_text(attacker_match.group(1))
+                if defender_match:
+                    points["defender"] = self._parse_number_from_text(defender_match.group(1))
+                return points
+        except Exception:
+            pass
+        return {}
+
+    def _parse_battle_report(self, source):
+        if not self._is_battle_report_page():
+            return None
+
+        try:
+            header = self.driver.find_element(By.ID, "reportHeader")
+            header_class = (header.get_attribute("class") or "").strip().lower()
+            header_text = re.sub(r"\s+", " ", header.text or "").strip()
+            winner_name = None
+            winner_match = re.search(r"Winner:\s*(.+)", header_text, re.IGNORECASE)
+            if winner_match:
+                winner_name = winner_match.group(1).strip()
+
+            attacker = self._extract_combatant_stats("attacker")
+            defender = self._extract_combatant_stats("defender")
+            attacker_name = attacker.get("Name")
+
+            won = None
+            if "reportwin" in header_class:
+                won = True
+            elif "reportlose" in header_class:
+                won = False
+            elif winner_name and attacker_name:
+                won = winner_name == attacker_name
+
+            return {
+                "source": source,
+                "won": won,
+                "winner": winner_name,
+                "attacker": attacker,
+                "defender": defender,
+                "reward": self._parse_reward_summary(),
+                "points": self._parse_report_points(),
+                "url": self.driver.current_url,
+            }
+        except Exception:
+            return None
+
+    def _log_battle_report(self, report, logger_callback=None):
+        if not report or not logger_callback:
+            return
+
+        source = (report.get("source") or "battle").capitalize()
+        won = report.get("won")
+        attacker = report.get("attacker") or {}
+        defender = report.get("defender") or {}
+        reward = report.get("reward") or {}
+        points = report.get("points") or {}
+        attacker_name = attacker.get("Name", "Unknown")
+        defender_name = defender.get("Name", "Unknown")
+
+        if won is True:
+            self._emit_log(logger_callback, f"{source} sonucu: Kazandik ({attacker_name} vs {defender_name})", "success")
+        elif won is False:
+            self._emit_log(logger_callback, f"{source} sonucu: Kaybettik ({attacker_name} vs {defender_name})", "danger")
+        else:
+            self._emit_log(logger_callback, f"{source} sonucu okundu ama kazanan net tespit edilemedi", "warning")
+
+        attacker_summary = " | ".join(
+            part for part in (
+                f"Lvl {attacker.get('Level')}" if attacker.get("Level") else None,
+                f"HP {attacker.get('Life points')}" if attacker.get("Life points") else None,
+                f"Str {attacker.get('Strength')}" if attacker.get("Strength") else None,
+                f"Dex {attacker.get('Dexterity')}" if attacker.get("Dexterity") else None,
+                f"Agi {attacker.get('Agility')}" if attacker.get("Agility") else None,
+                f"Con {attacker.get('Constitution')}" if attacker.get("Constitution") else None,
+                f"Dmg {attacker.get('Damage')}" if attacker.get("Damage") else None,
+                f"Armor {attacker.get('Armour')}" if attacker.get("Armour") else None,
+            ) if part
+        )
+        defender_summary = " | ".join(
+            part for part in (
+                f"Lvl {defender.get('Level')}" if defender.get("Level") else None,
+                f"HP {defender.get('Life points')}" if defender.get("Life points") else None,
+                f"Str {defender.get('Strength')}" if defender.get("Strength") else None,
+                f"Dex {defender.get('Dexterity')}" if defender.get("Dexterity") else None,
+                f"Agi {defender.get('Agility')}" if defender.get("Agility") else None,
+                f"Con {defender.get('Constitution')}" if defender.get("Constitution") else None,
+                f"Dmg {defender.get('Damage')}" if defender.get("Damage") else None,
+                f"Armor {defender.get('Armour')}" if defender.get("Armour") else None,
+            ) if part
+        )
+
+        if attacker_summary:
+            self._emit_log(logger_callback, f"{source} attacker stats: {attacker_summary}", "info")
+        if defender_summary:
+            self._emit_log(logger_callback, f"{source} defender stats: {defender_summary}", "muted")
+
+        reward_parts = []
+        if reward.get("gold") is not None:
+            reward_parts.append(f"Gold {reward['gold']}")
+        if reward.get("experience") is not None:
+            reward_parts.append(f"XP {reward['experience']}")
+        if reward.get("fame") is not None:
+            reward_parts.append(f"Fame {reward['fame']}")
+        if reward_parts:
+            self._emit_log(logger_callback, f"{source} reward: {' | '.join(reward_parts)}", "success")
+
+        points_parts = []
+        if points.get("attacker") is not None:
+            points_parts.append(f"Attacker points {points['attacker']}")
+        if points.get("defender") is not None:
+            points_parts.append(f"Defender points {points['defender']}")
+        if points_parts:
+            self._emit_log(logger_callback, f"{source} points: {' | '.join(points_parts)}", "info")
+
+    def _capture_and_log_battle_report(self, source, logger_callback=None, timeout=10):
+        try:
+            if not self._wait_for_battle_report(timeout=timeout):
+                self._emit_log(logger_callback, f"{source.capitalize()} battle report bulunamadi", "warning")
+                return None
+            self._wait_for_ui_settle(timeout=5)
+            report = self._parse_battle_report(source)
+            self._log_battle_report(report, logger_callback=logger_callback)
+            return report
+        except Exception as exc:
+            self._emit_log(logger_callback, f"{source.capitalize()} battle report parse hatasi: {exc}", "warning")
+            return None
+
     def click_last_played_button(self):
         candidates = [
             (By.XPATH, "//button[normalize-space()='Last Played']"),
@@ -935,11 +1191,13 @@ class GladiatusBot:
                     chosen = random.choice(lowest_buttons)
 
                     try:
+                        previous_url = self.driver.current_url
                         if not self._safe_click(chosen):
                             raise RuntimeError("click failed")
                         if logger_callback:
                             logger_callback(f"Clicked Circus Turma attack for lowest level {lowest}")
-                        self._wait_for_ui_settle(timeout=10)
+                        self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=15)
+                        self._capture_and_log_battle_report("circus turma", logger_callback=logger_callback, timeout=10)
                         self.navigate_to_overview(logger_callback=logger_callback)
                         return True
                     except StaleElementReferenceException:
@@ -997,7 +1255,7 @@ class GladiatusBot:
     def attempt_expedition_if_ready(self, expedition_location="Voodoo Temple", expedition_target=1, logger_callback=None):
         """Check cooldown bar; if ready and attempts > 0 perform one expedition click.
         Returns a dict describing the single click attempt."""
-        info = {"clicked": False, "attempts_before": None, "attempts_after": None, "message": ""}
+        info = {"clicked": False, "attempts_before": None, "attempts_after": None, "message": "", "battle_report": None}
         try:
             if logger_callback:
                 logger_callback("Ensuring game tab is active...")
@@ -1057,6 +1315,7 @@ class GladiatusBot:
                     logger_callback("Clicked expedition button, waiting for post-click navigation and expedition UI...")
                 self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=12)
                 self._wait_for_ui_settle(timeout=8)
+                info["battle_report"] = self._capture_and_log_battle_report("expedition", logger_callback=logger_callback, timeout=10)
                 self.navigate_to_overview(logger_callback=logger_callback)
             cur2, mx2 = self.get_expedition_attempts()
             info["attempts_after"] = cur2
@@ -2087,6 +2346,7 @@ class GladiatusBot:
                         if logger_callback:
                             logger_callback("Clicked dungeon minimap attack element")
                         self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=15)
+                        self._capture_and_log_battle_report("dungeon", logger_callback=logger_callback, timeout=10)
                         self.navigate_to_overview(logger_callback=logger_callback)
                         return True
                     except StaleElementReferenceException:
