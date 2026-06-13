@@ -557,6 +557,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
             {"issue_number": "41", "issue_title": "Polish custom window restore animations on Windows", "summary": "Windows'ta custom header korunarak taskbar minimize/restore animasyonlari daha yonlu ve yumusak hale getirildi; restore sirasi ustte flash azaltildi."},
             {"issue_number": "39", "issue_title": "Fix custom header window behavior on Windows", "summary": "Windows'ta custom header korunurken acilis flash'i, minimize, maximize ve Alt+Tab/taskbar gorunurlugu duzeltildi."},
             {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
@@ -1937,6 +1938,11 @@ class GladiatusGUI:
         )
         self._style_text_panel(self.log_text)
         self.log_text.grid(row=2, column=0, sticky="nsew")
+        self.log_text.tag_configure("success", foreground=self.SUCCESS)
+        self.log_text.tag_configure("danger", foreground=self.DANGER)
+        self.log_text.tag_configure("warning", foreground=self.WARNING)
+        self.log_text.tag_configure("info", foreground=self.INFO)
+        self.log_text.tag_configure("muted", foreground=self.MUTED)
         log_scroll = ModernScrollbar(
             panel,
             self.log_text.yview,
@@ -2437,14 +2443,21 @@ class GladiatusGUI:
 
     def append_log(self, msg):
         try:
+            tag = None
+            if isinstance(msg, dict):
+                tag = (msg.get("tag") or "").strip() or None
+                msg = msg.get("text", "")
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
             text = f"[{ts}] {msg}\n"
-            self._ui(lambda: self._append_log_ui(text))
+            self._ui(lambda: self._append_log_ui(text, tag))
         except Exception:
             pass
 
-    def _append_log_ui(self, text):
-        self.log_text.insert("end", text)
+    def _append_log_ui(self, text, tag=None):
+        if tag:
+            self.log_text.insert("end", text, tag)
+        else:
+            self.log_text.insert("end", text)
         self.log_text.see("end")
 
     def toggle_play(self):
