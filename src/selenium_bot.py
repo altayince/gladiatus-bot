@@ -585,6 +585,78 @@ class GladiatusBot:
             self._emit_log(logger_callback, f"{source.capitalize()} battle report parse hatasi: {exc}", "warning")
             return None
 
+    def _open_active_dungeon_page(self, logger_callback=None, timeout=12):
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "#cooldown_bar_dungeon a.cooldown_bar_link"),
+                (By.CSS_SELECTOR, "a.cooldown_bar_link[href*='mod=dungeon']"),
+                (By.XPATH, "//a[contains(@href,'mod=dungeon')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for element in elements:
+                        try:
+                            if not element.is_displayed() or not element.is_enabled():
+                                continue
+                            if not self._safe_click(element):
+                                continue
+                            if self._wait_for_page_context(
+                                expected_elements=[
+                                    (By.CSS_SELECTOR, "form[action*='action=cancelDungeon']"),
+                                    (By.XPATH, "//input[@type='submit' and @value='Cancel dungeon']"),
+                                ],
+                                url_keywords=["mod=dungeon"],
+                                timeout=timeout,
+                            ):
+                                return True
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("Failed to reopen active dungeon page")
+            return False
+        except Exception as exc:
+            if logger_callback:
+                logger_callback(f"Error reopening active dungeon page: {exc}")
+            return False
+
+    def cancel_active_dungeon(self, logger_callback=None):
+        try:
+            if not self._open_active_dungeon_page(logger_callback=logger_callback):
+                return False
+
+            candidates = [
+                (By.XPATH, "//input[@type='submit' and @value='Cancel dungeon']"),
+                (By.CSS_SELECTOR, "form[action*='action=cancelDungeon'] input.button1"),
+                (By.CSS_SELECTOR, "form[action*='action=cancelDungeon'] input[type='submit']"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for element in elements:
+                        try:
+                            if not element.is_displayed() or not element.is_enabled():
+                                continue
+                            if not self._safe_click(element):
+                                continue
+                            self._wait_for_ui_settle(timeout=8)
+                            self._emit_log(logger_callback, "Dungeon iptal edildi", "warning")
+                            return True
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+
+            if logger_callback:
+                logger_callback("Cancel dungeon button not found")
+            return False
+        except Exception as exc:
+            if logger_callback:
+                logger_callback(f"Error cancelling dungeon: {exc}")
+            return False
+
     def click_last_played_button(self):
         candidates = [
             (By.XPATH, "//button[normalize-space()='Last Played']"),
@@ -997,7 +1069,7 @@ class GladiatusBot:
                 logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
             return False
 
-    def attempt_dungeon_if_ready(self, dungeon_location="Voodoo Temple", dungeon_difficulty="Normal", logger_callback=None):
+    def attempt_dungeon_if_ready(self, dungeon_location="Voodoo Temple", dungeon_difficulty="Normal", cancel_on_failure=False, logger_callback=None):
         """If dungeon cooldown indicates ready, navigate and click a random attack.
         Returns dict with result."""
         info = {"clicked": False, "message": ""}
@@ -1021,6 +1093,7 @@ class GladiatusBot:
             clicked = self.open_dungeon_and_random_attack(
                 dungeon_location=dungeon_location,
                 dungeon_difficulty=dungeon_difficulty,
+                cancel_on_failure=cancel_on_failure,
                 logger_callback=logger_callback,
             )
             info["clicked"] = bool(clicked)
@@ -2224,7 +2297,7 @@ class GladiatusBot:
         except Exception:
             return False
 
-    def open_dungeon_and_random_attack(self, dungeon_location="1", dungeon_difficulty="Normal", logger_callback=None, max_retries=3):
+    def open_dungeon_and_random_attack(self, dungeon_location="1", dungeon_difficulty="Normal", cancel_on_failure=False, logger_callback=None, max_retries=3):
         """Open the dungeon location and click a random minimap attack.
         Returns True if an attack element was clicked."""
         try:
@@ -2346,7 +2419,10 @@ class GladiatusBot:
                         if logger_callback:
                             logger_callback("Clicked dungeon minimap attack element")
                         self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=15)
-                        self._capture_and_log_battle_report("dungeon", logger_callback=logger_callback, timeout=10)
+                        report = self._capture_and_log_battle_report("dungeon", logger_callback=logger_callback, timeout=10)
+                        if cancel_on_failure and report and report.get("won") is False:
+                            self.cancel_active_dungeon(logger_callback=logger_callback)
+                            return True
                         self.navigate_to_overview(logger_callback=logger_callback)
                         return True
                     except StaleElementReferenceException:

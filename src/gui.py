@@ -556,6 +556,7 @@ class GladiatusGUI:
         self.expedition_target_var = tk.StringVar(value="1")
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
+        self.dungeon_leave_cancel_on_failure_var = tk.BooleanVar(value=False)
         self.change_notes = [
             {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
             {"issue_number": "41", "issue_title": "Polish custom window restore animations on Windows", "summary": "Windows'ta custom header korunarak taskbar minimize/restore animasyonlari daha yonlu ve yumusak hale getirildi; restore sirasi ustte flash azaltildi."},
@@ -1758,6 +1759,16 @@ class GladiatusGUI:
                 font=("Segoe UI Semibold", 10),
             ).grid(row=0, column=idx + 1, sticky="w", padx=(0, 12))
 
+        ThemedCheckbox(
+            dungeon,
+            "Leave cancel on failure",
+            self.dungeon_leave_cancel_on_failure_var,
+            bg_color=self.PANEL_ALT,
+            text_color=self.TEXT,
+            muted_color=self.MUTED,
+            accent_color=self.ACCENT_SOFT,
+        ).grid(row=4, column=0, sticky="w", pady=(16, 0))
+
         recovery_header = tk.Frame(panel, bg=self.PANEL)
         recovery_header.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(22, 10))
         tk.Label(recovery_header, text="Recovery Automation", bg=self.PANEL, fg=self.TEXT, font=("Segoe UI Semibold", 13)).grid(row=0, column=0, sticky="w")
@@ -2098,6 +2109,7 @@ class GladiatusGUI:
             self.expedition_target_var,
             self.dungeon_location_var,
             self.dungeon_difficulty_var,
+            self.dungeon_leave_cancel_on_failure_var,
         ):
             variable.trace_add("write", self._on_settings_changed)
 
@@ -2120,6 +2132,7 @@ class GladiatusGUI:
             "expedition_target": self.get_expedition_target(),
             "dungeon_location": self.get_dungeon_location(),
             "dungeon_difficulty": self.get_dungeon_difficulty(),
+            "dungeon_leave_cancel_on_failure": bool(self.dungeon_leave_cancel_on_failure_var.get()),
         }
 
     def _coerce_bool(self, value, default):
@@ -2168,6 +2181,10 @@ class GladiatusGUI:
 
             dungeon_difficulty = data.get("dungeon_difficulty", "Normal")
             self.dungeon_difficulty_var.set(self._coerce_dungeon_difficulty(dungeon_difficulty))
+
+            self.dungeon_leave_cancel_on_failure_var.set(
+                self._coerce_bool(data.get("dungeon_leave_cancel_on_failure"), False)
+            )
         except Exception as exc:
             logger.warning("Could not load GUI settings: %s", exc)
 
@@ -2434,6 +2451,9 @@ class GladiatusGUI:
     def get_dungeon_difficulty(self):
         return self._coerce_dungeon_difficulty(self.dungeon_difficulty_var.get())
 
+    def get_dungeon_leave_cancel_on_failure(self):
+        return bool(self.dungeon_leave_cancel_on_failure_var.get())
+
     def get_recovery_threshold(self):
         try:
             value = int(self.recovery_threshold_var.get())
@@ -2528,6 +2548,7 @@ class GladiatusGUI:
                         self.bot.attempt_dungeon_if_ready(
                             dungeon_location=self.get_dungeon_location(),
                             dungeon_difficulty=self.get_dungeon_difficulty(),
+                            cancel_on_failure=self.get_dungeon_leave_cancel_on_failure(),
                             logger_callback=self.append_log,
                         )
                     except Exception as exc:
