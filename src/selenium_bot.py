@@ -16,6 +16,14 @@ logging.basicConfig(level=logging.INFO)
 
 
 class GladiatusBot:
+    SELL_VENDOR_SEQUENCE = [
+        "Weapon smith",
+        "Armour smith",
+        "General goods",
+        "Alchemist",
+        "Mercenary",
+        "Malefica",
+    ]
     EXPEDITION_LOCATIONS = {
         "grimwood": 0,
         "pirate harbour": 1,
@@ -1528,6 +1536,83 @@ class GladiatusBot:
                 logger_callback(f"Error opening General goods: {e}")
             return False
 
+    def open_weapon_smith(self, logger_callback=None):
+        """Open Weapon smith from the city menu."""
+        try:
+            candidates = [
+                (By.XPATH, "//a[contains(@class,'menuitem') and contains(normalize-space(.), 'Weapon smith')]"),
+                (By.XPATH, "//a[contains(normalize-space(.), 'Weapon smith')]"),
+                (By.CSS_SELECTOR, "a.menuitem[href*='mod=inventory'][href*='sub=1']"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "#shop, #inv"),
+                                        (By.CSS_SELECTOR, "a.awesome-tabs[data-bag-number]"),
+                                    ],
+                                    url_keywords=["mod=inventory"],
+                                    timeout=12,
+                                ):
+                                    if logger_callback:
+                                        logger_callback("Opened Weapon smith")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("Weapon smith menu item not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening Weapon smith: {e}")
+            return False
+
+    def open_city_vendor(self, vendor_name, logger_callback=None):
+        """Open a city vendor inventory page by visible menu label."""
+        normalized_name = (vendor_name or "").strip()
+        if not normalized_name:
+            return False
+        if normalized_name.lower() == "weapon smith":
+            return self.open_weapon_smith(logger_callback=logger_callback)
+        if normalized_name.lower() == "general goods":
+            return self.open_general_goods(logger_callback=logger_callback)
+
+        try:
+            candidates = [
+                (By.XPATH, f"//a[contains(@class,'menuitem') and contains(normalize-space(.), '{normalized_name}')]"),
+                (By.XPATH, f"//a[contains(normalize-space(.), '{normalized_name}')]"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "#shop, #inv"),
+                                        (By.CSS_SELECTOR, "a.awesome-tabs[data-bag-number]"),
+                                    ],
+                                    url_keywords=["mod=inventory"],
+                                    timeout=12,
+                                ):
+                                    if logger_callback:
+                                        logger_callback(f"Opened {normalized_name}")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback(f"{normalized_name} menu item not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening {normalized_name}: {e}")
+            return False
+
     def open_shop_tab_two(self, logger_callback=None):
         """Open the second shop tab where refill items are expected."""
         try:
@@ -1562,6 +1647,43 @@ class GladiatusBot:
                 logger_callback(f"Error opening shop tab II: {e}")
             return False
 
+    def open_vendor_sell_tab(self, vendor_name="Vendor", logger_callback=None):
+        """Open the sell tab on a vendor inventory page."""
+        try:
+            candidates = [
+                (By.CSS_SELECTOR, "#shop_nav a[href*='subsub=1']"),
+                (By.XPATH, "//div[@id='shop_nav']//a[contains(@href,'subsub=1')]"),
+                (By.XPATH, "//a[contains(@href,'subsub=1')]"),
+                (By.XPATH, "//a[translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='sell']"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if self._wait_for_page_context(
+                                    expected_elements=[
+                                        (By.CSS_SELECTOR, "#shop"),
+                                        (By.CSS_SELECTOR, "#inv"),
+                                        (By.CSS_SELECTOR, "#shop .grid-droparea, #shop .ui-droppable.grid-droparea"),
+                                    ],
+                                    url_keywords=["mod=inventory", "subsub=1"],
+                                    timeout=12,
+                                ):
+                                    if logger_callback:
+                                        logger_callback(f"Opened {vendor_name} sell tab")
+                                    return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback(f"{vendor_name} sell tab not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error opening {vendor_name} sell tab: {e}")
+            return False
+
     def _parse_int_attr(self, element, attr_name, default=None):
         try:
             value = element.get_attribute(attr_name)
@@ -1571,7 +1693,7 @@ class GladiatusBot:
         except Exception:
             return default
 
-    def _get_inventory_occupancy(self, grid_element):
+    def _get_grid_occupancy(self, grid_element):
         occupancy = set()
         for item in grid_element.find_elements(By.CSS_SELECTOR, ".item-i"):
             try:
@@ -1590,14 +1712,17 @@ class GladiatusBot:
                 continue
         return occupancy
 
-    def _get_visible_inventory_dropareas(self, timeout=3, limit=12, logger_callback=None, log_missing=True):
+    def _get_inventory_occupancy(self, grid_element):
+        return self._get_grid_occupancy(grid_element)
+
+    def _get_visible_grid_dropareas(self, grid_id="inv", timeout=3, limit=12, logger_callback=None, log_missing=True):
         try:
             grid = None
             candidates = []
             end = time.time() + timeout
             while time.time() < end:
                 try:
-                    grid = self.driver.find_element(By.ID, "inv")
+                    grid = self.driver.find_element(By.ID, grid_id)
                     if not grid.is_displayed():
                         time.sleep(0.15)
                         continue
@@ -1610,7 +1735,7 @@ class GladiatusBot:
 
                 candidates = []
                 try:
-                    empty_slots = grid.find_elements(By.CSS_SELECTOR, ".ui-droppable.grid-droparea")
+                    empty_slots = grid.find_elements(By.CSS_SELECTOR, ".ui-droppable.grid-droparea, .grid-droparea")
                 except StaleElementReferenceException:
                     time.sleep(0.15)
                     continue
@@ -1625,17 +1750,29 @@ class GladiatusBot:
                         continue
 
                 if candidates:
-                    return grid, candidates[:limit]
+                    return grid, candidates[:limit] if limit else candidates
 
                 time.sleep(0.15)
 
             if logger_callback and log_missing:
-                logger_callback("No visible inventory dropareas found")
+                logger_callback(f"No visible dropareas found in grid '{grid_id}'")
             return grid, candidates
         except Exception as e:
             if logger_callback:
-                logger_callback(f"Error finding inventory dropareas: {e}")
+                logger_callback(f"Error finding dropareas in grid '{grid_id}': {e}")
             return None, []
+
+    def _get_visible_inventory_dropareas(self, timeout=3, limit=12, logger_callback=None, log_missing=True):
+        grid, candidates = self._get_visible_grid_dropareas(
+            grid_id="inv",
+            timeout=timeout,
+            limit=limit,
+            logger_callback=logger_callback,
+            log_missing=log_missing,
+        )
+        if not candidates and logger_callback and log_missing:
+            logger_callback("No visible inventory dropareas found")
+        return grid, candidates
 
     def _get_droparea_key(self, slot):
         try:
@@ -2484,13 +2621,14 @@ class GladiatusBot:
                 logger_callback(f"Error navigating to Overview: {e}")
             return False
 
-    def open_first_inventory_bag(self, logger_callback=None):
-        """Open the first inventory bag before searching for healing items."""
+    def open_inventory_bag(self, bag_number="512", logger_callback=None):
+        """Open an inventory bag by its data-bag-number."""
         try:
+            target = str(bag_number).strip()
             bag_candidates = [
-                (By.CSS_SELECTOR, "a.awesome-tabs.current[data-bag-number='512']"),
-                (By.CSS_SELECTOR, "a.awesome-tabs[data-bag-number='512']"),
-                (By.XPATH, "//a[contains(@class, 'awesome-tabs') and @data-bag-number='512']"),
+                (By.CSS_SELECTOR, f"a.awesome-tabs.current[data-bag-number='{target}']"),
+                (By.CSS_SELECTOR, f"a.awesome-tabs[data-bag-number='{target}']"),
+                (By.XPATH, f"//a[contains(@class, 'awesome-tabs') and @data-bag-number='{target}']"),
             ]
             for by, value in bag_candidates:
                 try:
@@ -2500,18 +2638,623 @@ class GladiatusBot:
                             self._safe_click(bag)
                             time.sleep(0.5)
                         if logger_callback:
-                            logger_callback("Opened first inventory bag")
+                            logger_callback(f"Opened inventory bag {target}")
                         return True
                 except Exception:
                     continue
 
+            tabs = []
+            for selector in (
+                "a.awesome-tabs[data-bag-number]",
+                "#inv .awesome-tabs[data-bag-number]",
+            ):
+                try:
+                    tabs.extend([tab for tab in self.driver.find_elements(By.CSS_SELECTOR, selector) if tab.is_displayed()])
+                except Exception:
+                    continue
+            seen = set()
+            ordered_tabs = []
+            for tab in tabs:
+                key = tab.get_attribute("data-bag-number") or id(tab)
+                if key in seen:
+                    continue
+                seen.add(key)
+                ordered_tabs.append(tab)
+            ordered_tabs.sort(key=lambda el: el.location.get("x", 0))
+            numeric_targets = {"512": 0, "513": 1, "514": 2, "515": 3}
+            target_index = numeric_targets.get(target)
+            if target_index is not None and len(ordered_tabs) > target_index:
+                bag = ordered_tabs[target_index]
+                if "current" not in (bag.get_attribute("class") or ""):
+                    self._safe_click(bag)
+                    time.sleep(0.5)
+                if logger_callback:
+                    logger_callback(f"Opened inventory bag {target} via tab order fallback")
+                return True
+
             if logger_callback:
-                logger_callback("First inventory bag not found")
+                logger_callback(f"Inventory bag {target} not found")
             return False
         except Exception as e:
             if logger_callback:
-                logger_callback(f"Error opening first inventory bag: {e}")
+                logger_callback(f"Error opening inventory bag {bag_number}: {e}")
             return False
+
+    def open_third_inventory_bag(self, logger_callback=None):
+        return self.open_inventory_bag("514", logger_callback=logger_callback)
+
+    def _get_item_key(self, item_element):
+        for attr_name in ("data-item-id", "data-hash", "data-basis"):
+            try:
+                value = item_element.get_attribute(attr_name)
+                if value:
+                    return f"{attr_name}:{value}"
+            except Exception:
+                continue
+        try:
+            pos_x = item_element.get_attribute("data-position-x") or "?"
+            pos_y = item_element.get_attribute("data-position-y") or "?"
+            return f"pos:{pos_x}:{pos_y}"
+        except Exception:
+            return None
+
+    def find_inventory_items_in_bag(self, container_number="512", timeout=5):
+        end = time.time() + timeout
+        container = str(container_number).strip()
+        while time.time() < end:
+            try:
+                items = self.driver.find_elements(
+                    By.XPATH,
+                    f"//div[@data-container-number='{container}' and contains(@class, 'item-i')]",
+                )
+                visible = [item for item in items if item.is_displayed()]
+                return visible
+            except Exception:
+                time.sleep(0.2)
+        return []
+
+    def _extract_inventory_item_snapshot(self, item_element):
+        size_x = max(1, self._parse_int_attr(item_element, "data-measurement-x", 1) or 1)
+        size_y = max(1, self._parse_int_attr(item_element, "data-measurement-y", 1) or 1)
+        return {
+            "key": self._get_item_key(item_element),
+            "width": size_x,
+            "height": size_y,
+            "area": size_x * size_y,
+            "position_x": self._parse_int_attr(item_element, "data-position-x", 1) or 1,
+            "position_y": self._parse_int_attr(item_element, "data-position-y", 1) or 1,
+        }
+
+    def _find_item_in_bag_by_key(self, container_number, item_key):
+        if not item_key:
+            return None
+        for item in self.find_inventory_items_in_bag(container_number=container_number, timeout=1.5):
+            if self._get_item_key(item) == item_key:
+                return item
+        return None
+
+    def _parse_slot_anchor(self, slot):
+        try:
+            style = slot.get_attribute("style") or ""
+            left_match = re.search(r"left:\s*(-?\d+)", style)
+            top_match = re.search(r"top:\s*(-?\d+)", style)
+            if left_match and top_match:
+                return int(left_match.group(1)), int(top_match.group(1))
+        except Exception:
+            pass
+        try:
+            location = slot.location
+            return int(location.get("x", 0)), int(location.get("y", 0))
+        except Exception:
+            return None
+
+    def _map_dropareas_to_grid_coordinates(self, dropareas):
+        anchors = []
+        for slot in dropareas:
+            anchor = self._parse_slot_anchor(slot)
+            if anchor is not None:
+                anchors.append((slot, anchor[0], anchor[1]))
+        if not anchors:
+            return {}
+
+        xs = sorted({x for _, x, _ in anchors})
+        ys = sorted({y for _, _, y in anchors})
+        x_map = {value: idx + 1 for idx, value in enumerate(xs)}
+        y_map = {value: idx + 1 for idx, value in enumerate(ys)}
+
+        mapped = {}
+        for slot, anchor_x, anchor_y in anchors:
+            mapped[(x_map[anchor_x], y_map[anchor_y])] = slot
+        return mapped
+
+    def _compute_free_rectangle_area(self, free_cells, start_x, start_y, max_x, max_y):
+        best = 0
+        width = 0
+        x = start_x
+        while x <= max_x and (x, start_y) in free_cells:
+            width += 1
+            current_min_width = width
+            y = start_y
+            while y <= max_y and (start_x, y) in free_cells:
+                row_width = 0
+                while row_width < current_min_width and (start_x + row_width, y) in free_cells:
+                    row_width += 1
+                if row_width == 0:
+                    break
+                current_min_width = min(current_min_width, row_width)
+                best = max(best, current_min_width * (y - start_y + 1))
+                y += 1
+            x += 1
+        return best
+
+    def _choose_best_sell_target(self, snapshot, droparea_map):
+        if not snapshot or not droparea_map:
+            return None
+        free_cells = set(droparea_map.keys())
+        max_x = max(x for x, _ in free_cells)
+        max_y = max(y for _, y in free_cells)
+        item_width = snapshot["width"]
+        item_height = snapshot["height"]
+        best_choice = None
+        best_score = None
+
+        for origin_x, origin_y in sorted(free_cells, key=lambda coord: (coord[1], coord[0])):
+            needed = {
+                (x, y)
+                for x in range(origin_x, origin_x + item_width)
+                for y in range(origin_y, origin_y + item_height)
+            }
+            if any(x > max_x or y > max_y for x, y in needed):
+                continue
+            if not needed.issubset(free_cells):
+                continue
+
+            rect_area = self._compute_free_rectangle_area(free_cells, origin_x, origin_y, max_x, max_y)
+            score = (rect_area, -(origin_y), -(origin_x))
+            if best_score is None or score > best_score:
+                best_score = score
+                best_choice = {
+                    "origin": (origin_x, origin_y),
+                    "slot": droparea_map[(origin_x, origin_y)],
+                    "rect_area": rect_area,
+                }
+        return best_choice
+
+    def _get_best_fit_candidates(self, snapshots, droparea_map):
+        candidates = []
+        for snapshot in snapshots:
+            choice = self._choose_best_sell_target(snapshot, droparea_map)
+            if choice:
+                candidates.append((snapshot, choice))
+        candidates.sort(
+            key=lambda entry: (
+                -entry[0]["area"],
+                -entry[0]["height"],
+                -entry[0]["width"],
+                entry[0]["position_y"],
+                entry[0]["position_x"],
+            )
+        )
+        return candidates
+
+    def _wait_for_item_transfer_from_bag(self, container_number, item_key, timeout=2.5):
+        end = time.time() + timeout
+        while time.time() < end:
+            if self._find_item_in_bag_by_key(container_number, item_key) is None:
+                return True
+            time.sleep(0.15)
+        return False
+
+    def _find_item_in_vendor_grid_by_key(self, item_key):
+        if not item_key:
+            return None
+        try:
+            items = self.driver.find_elements(By.CSS_SELECTOR, "#shop .item-i")
+            for item in items:
+                try:
+                    if not item.is_displayed():
+                        continue
+                    if self._get_item_key(item) == item_key:
+                        return item
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return None
+
+    def _wait_for_item_transfer_to_vendor_or_leave_bag(self, container_number, item_key, timeout=2.5):
+        end = time.time() + timeout
+        while time.time() < end:
+            if self._find_item_in_bag_by_key(container_number, item_key) is None:
+                return True
+            if self._find_item_in_vendor_grid_by_key(item_key) is not None:
+                return True
+            time.sleep(0.15)
+        return False
+
+    def open_first_inventory_bag(self, logger_callback=None):
+        """Open the first inventory bag before searching for healing items."""
+        opened = self.open_inventory_bag("512", logger_callback=logger_callback)
+        if not opened and logger_callback:
+            logger_callback("First inventory bag not found")
+        return opened
+
+    def _get_visible_vendor_dropareas(self, timeout=2.5, logger_callback=None):
+        return self._get_visible_grid_dropareas(
+            grid_id="shop",
+            timeout=timeout,
+            limit=0,
+            logger_callback=logger_callback,
+            log_missing=False,
+        )
+
+    def _reveal_vendor_dropareas_with_drag(self, item_element, logger_callback=None):
+        try:
+            from selenium.webdriver.common.action_chains import ActionChains
+
+            if logger_callback:
+                logger_callback("Vendor click reveal failed; trying drag reveal fallback")
+
+            actions = ActionChains(self.driver)
+            actions.click_and_hold(item_element).move_by_offset(10, 10).pause(0.12).perform()
+            time.sleep(0.25)
+
+            _grid, dropareas = self._get_visible_vendor_dropareas(timeout=2.0, logger_callback=logger_callback)
+            mapped = self._map_dropareas_to_grid_coordinates(dropareas) if dropareas else {}
+            if logger_callback:
+                logger_callback(
+                    f"Vendor drag reveal produced {len(dropareas)} visible dropareas and {len(mapped)} mapped grid slots"
+                )
+            try:
+                ActionChains(self.driver).release().perform()
+            except Exception:
+                pass
+            return dropareas, mapped
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Vendor drag reveal fallback failed: {e}")
+            try:
+                from selenium.webdriver.common.action_chains import ActionChains
+                ActionChains(self.driver).release().perform()
+            except Exception:
+                pass
+            return None, {}
+
+    def _reveal_vendor_dropareas_for_item(self, item_element, logger_callback=None):
+        try:
+            if not self._safe_click(item_element):
+                if logger_callback:
+                    logger_callback("Vendor reveal click failed")
+                return None, {}
+            time.sleep(0.2)
+            _grid, dropareas = self._get_visible_vendor_dropareas(timeout=2.0, logger_callback=logger_callback)
+            if not dropareas:
+                if logger_callback:
+                    logger_callback("Vendor reveal produced 0 dropareas")
+                return self._reveal_vendor_dropareas_with_drag(item_element, logger_callback=logger_callback)
+            mapped = self._map_dropareas_to_grid_coordinates(dropareas)
+            if logger_callback:
+                logger_callback(
+                    f"Vendor reveal produced {len(dropareas)} visible dropareas and {len(mapped)} mapped grid slots"
+                )
+            return dropareas, mapped
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error revealing vendor dropareas: {e}")
+            return None, {}
+
+    def _drag_item_to_vendor_slot(self, item_element, target_slot, logger_callback=None):
+        try:
+            from selenium.webdriver.common.action_chains import ActionChains
+
+            actions = ActionChains(self.driver)
+            actions.click_and_hold(item_element).move_to_element(target_slot).pause(0.12).release().perform()
+            time.sleep(0.25)
+            return True
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error dragging item to vendor slot: {e}")
+            return False
+
+    def _submit_vendor_sell_if_present(self, vendor_name="Vendor", logger_callback=None):
+        candidates = [
+            (By.XPATH, "//input[@type='submit' and translate(@value,'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='sell']"),
+            (By.XPATH, "//button[translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='sell']"),
+            (By.XPATH, "//a[translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')='sell']"),
+        ]
+        if logger_callback:
+            logger_callback(f"Looking for {vendor_name} sell button...")
+        for by, value in candidates:
+            try:
+                elements = self.driver.find_elements(by, value)
+                for element in elements:
+                    if element.is_displayed() and element.is_enabled():
+                        if self._safe_click(element):
+                            self._wait_for_ui_settle(timeout=5)
+                            if logger_callback:
+                                logger_callback(f"{vendor_name} sell batch submitted")
+                            return True
+            except Exception:
+                continue
+        if logger_callback:
+            logger_callback(f"{vendor_name} sell button not found")
+        return False
+
+    def _snapshot_vendorable_bag_items(self, container_number="514", timeout=1.5):
+        items = self.find_inventory_items_in_bag(container_number=container_number, timeout=timeout)
+        snapshots = []
+        for item in items:
+            try:
+                snapshots.append(self._extract_inventory_item_snapshot(item))
+            except Exception:
+                continue
+        snapshots.sort(key=lambda data: (-data["area"], -data["height"], -data["width"], data["position_y"], data["position_x"]))
+        return snapshots
+
+    def run_weapon_smith_sell_mode(self, max_duration_seconds=300, should_stop_callback=None, logger_callback=None):
+        """Sell visible items from the third bag through Weapon smith for up to the given duration."""
+        result = {
+            "sold_any": False,
+            "placements": 0,
+            "batches": 0,
+            "timed_out": False,
+            "stopped": False,
+            "message": "",
+        }
+        deadline = time.time() + max(1, int(max_duration_seconds))
+
+        def should_stop():
+            if should_stop_callback is None:
+                return False
+            try:
+                return bool(should_stop_callback())
+            except Exception:
+                return False
+
+        try:
+            if logger_callback:
+                logger_callback("Sell mode started")
+
+            if not self.ensure_game_tab():
+                result["message"] = "Could not find game tab for sell mode"
+                return result
+
+            if not self.open_city_map(logger_callback=logger_callback):
+                result["message"] = "Could not open city submenu"
+                return result
+
+            vendor_index = 0
+            current_vendor = self.SELL_VENDOR_SEQUENCE[vendor_index]
+
+            if not self.open_city_vendor(current_vendor, logger_callback=logger_callback):
+                result["message"] = f"Could not open {current_vendor}"
+                return result
+            if not self.open_vendor_sell_tab(current_vendor, logger_callback=logger_callback):
+                result["message"] = f"Could not open {current_vendor} sell tab"
+                return result
+
+            if not self.open_third_inventory_bag(logger_callback=logger_callback):
+                result["message"] = "Could not open third inventory bag"
+                return result
+
+            while time.time() < deadline:
+                if should_stop():
+                    result["stopped"] = True
+                    result["message"] = "Sell mode stopped by user"
+                    break
+
+                snapshots = self._snapshot_vendorable_bag_items(container_number="514", timeout=1.2)
+                if logger_callback:
+                    logger_callback(f"{current_vendor}: sell scan found {len(snapshots)} item(s) in bag III")
+                if not snapshots:
+                    result["message"] = "No more items in bag III"
+                    break
+
+                placed_this_pass = 0
+                saw_no_fit = False
+                probe_snapshot = min(
+                    snapshots,
+                    key=lambda data: (data["area"], data["height"], data["width"], data["position_y"], data["position_x"]),
+                )
+                probe_item = self._find_item_in_bag_by_key("514", probe_snapshot["key"])
+                if probe_item is None:
+                    if logger_callback:
+                        logger_callback(f"{current_vendor}: probe item disappeared before reveal")
+                    result["message"] = "Could not prepare vendor fit probe"
+                    break
+
+                if logger_callback:
+                    logger_callback(
+                        f"{current_vendor}: probing available sell space with smallest item "
+                        f"{probe_snapshot['key'] or 'unknown'} size={probe_snapshot['width']}x{probe_snapshot['height']}"
+                    )
+                _probe_dropareas, probe_droparea_map = self._reveal_vendor_dropareas_for_item(
+                    probe_item, logger_callback=logger_callback
+                )
+
+                if not probe_droparea_map:
+                    if logger_callback:
+                        logger_callback(f"{current_vendor}: probe found no sell slots at all")
+                    saw_no_fit = True
+                    probe_droparea_map = {}
+
+                fit_candidates = self._get_best_fit_candidates(snapshots, probe_droparea_map)
+                if logger_callback:
+                    logger_callback(
+                        f"{current_vendor}: {len(fit_candidates)} item(s) currently fit revealed sell space"
+                    )
+                if not fit_candidates:
+                    saw_no_fit = True
+                restart_vendor_probe = False
+                for snapshot, _initial_choice in fit_candidates:
+                    if should_stop():
+                        result["stopped"] = True
+                        result["message"] = "Sell mode stopped by user"
+                        break
+                    if time.time() >= deadline:
+                        result["timed_out"] = True
+                        result["message"] = "Sell mode timed out"
+                        break
+
+                    item_element = self._find_item_in_bag_by_key("514", snapshot["key"])
+                    if item_element is None:
+                        if logger_callback:
+                            logger_callback(f"{current_vendor}: sell item disappeared before processing: {snapshot['key'] or 'unknown'}")
+                        continue
+
+                    if logger_callback:
+                        logger_callback(
+                            f"{current_vendor}: processing item {snapshot['key'] or 'unknown'} size={snapshot['width']}x{snapshot['height']} area={snapshot['area']}"
+                        )
+
+                    dropareas = None
+                    droparea_map = {}
+                    for attempt in range(2):
+                        if logger_callback:
+                            logger_callback(f"{current_vendor}: reveal/place attempt {attempt + 1}/2 for {snapshot['key'] or 'unknown'}")
+                        dropareas, droparea_map = self._reveal_vendor_dropareas_for_item(item_element, logger_callback=logger_callback)
+                        if not droparea_map:
+                            if logger_callback:
+                                logger_callback(f"{current_vendor}: no mapped sell slots available for {snapshot['key'] or 'unknown'}")
+                            continue
+                        choice = self._choose_best_sell_target(snapshot, droparea_map)
+                        if not choice:
+                            saw_no_fit = True
+                            if logger_callback and attempt == 0:
+                                logger_callback(
+                                    f"{current_vendor}: item {snapshot['key'] or 'unknown'} does not fit current sell area; retrying with fresh reveal"
+                                )
+                            elif logger_callback:
+                                logger_callback(
+                                    f"{current_vendor}: item {snapshot['key'] or 'unknown'} still does not fit any sell slot"
+                                )
+                            if attempt == 0:
+                                time.sleep(0.15)
+                                continue
+                            break
+
+                        if logger_callback:
+                            logger_callback(
+                                f"{current_vendor}: best sell slot for {snapshot['key'] or 'unknown'} -> {choice['origin'][0]}:{choice['origin'][1]} "
+                                f"(free-rectangle-area={choice['rect_area']})"
+                            )
+
+                        if not self._drag_item_to_vendor_slot(item_element, choice["slot"], logger_callback=logger_callback):
+                            if logger_callback:
+                                logger_callback(f"{current_vendor}: drag to sell slot failed for {snapshot['key'] or 'unknown'}")
+                            if attempt == 0:
+                                time.sleep(0.15)
+                                continue
+                            choice = None
+                            break
+
+                        moved = self._wait_for_item_transfer_to_vendor_or_leave_bag("514", snapshot["key"], timeout=2.0)
+                        if not moved and attempt == 0:
+                            if logger_callback:
+                                logger_callback(
+                                    f"{current_vendor}: bag transfer not confirmed yet for {snapshot['key'] or 'unknown'}; refreshing item reference"
+                                )
+                            item_element = self._find_item_in_bag_by_key("514", snapshot["key"])
+                            if item_element is None:
+                                moved = True
+                            else:
+                                time.sleep(0.15)
+                                continue
+
+                        if moved:
+                            placed_this_pass += 1
+                            result["placements"] += 1
+                            result["sold_any"] = True
+                            if logger_callback:
+                                logger_callback(
+                                    f"{current_vendor}: placed item {snapshot['key'] or 'unknown'} at sell slot {choice['origin'][0]}:{choice['origin'][1]}"
+                                )
+                            restart_vendor_probe = True
+                            break
+
+                        if logger_callback:
+                            logger_callback(f"{current_vendor}: placement could not be verified for {snapshot['key'] or 'unknown'}")
+                        choice = None
+
+                    if restart_vendor_probe or time.time() >= deadline or result["stopped"]:
+                        break
+
+                if logger_callback and fit_candidates:
+                    skipped = [snapshot for snapshot in snapshots if snapshot["key"] not in {entry[0]["key"] for entry in fit_candidates}]
+                    for skipped_snapshot in skipped:
+                        logger_callback(
+                            f"{current_vendor}: skipping oversized item {skipped_snapshot['key'] or 'unknown'} "
+                            f"size={skipped_snapshot['width']}x{skipped_snapshot['height']} because it cannot fit current sell space"
+                        )
+
+                if restart_vendor_probe:
+                    if logger_callback:
+                        logger_callback(f"{current_vendor}: sell area changed after placement; reprobe before placing more items")
+                elif placed_this_pass <= 0:
+                    if saw_no_fit and logger_callback:
+                        logger_callback(f"{current_vendor}: sell area has no valid space for remaining bag III items")
+                    next_vendor_index = vendor_index + 1
+                    if saw_no_fit and next_vendor_index < len(self.SELL_VENDOR_SEQUENCE):
+                        switched_vendor = False
+                        while next_vendor_index < len(self.SELL_VENDOR_SEQUENCE):
+                            next_vendor = self.SELL_VENDOR_SEQUENCE[next_vendor_index]
+                            if logger_callback:
+                                logger_callback(f"{current_vendor} full for current packing; switching to {next_vendor}")
+                            if self.open_city_vendor(next_vendor, logger_callback=logger_callback):
+                                if not self.open_vendor_sell_tab(next_vendor, logger_callback=logger_callback):
+                                    if logger_callback:
+                                        logger_callback(f"Failed to open {next_vendor} sell tab; trying next vendor")
+                                    next_vendor_index += 1
+                                    continue
+                                if not self.open_third_inventory_bag(logger_callback=logger_callback):
+                                    result["message"] = f"Could not reopen third inventory bag after opening {next_vendor}"
+                                    break
+                                vendor_index = next_vendor_index
+                                current_vendor = next_vendor
+                                switched_vendor = True
+                                break
+                            if logger_callback:
+                                logger_callback(f"Failed to open fallback vendor {next_vendor}; trying next if available")
+                            next_vendor_index += 1
+                        if result["message"]:
+                            break
+                        if switched_vendor:
+                            continue
+                    result["message"] = result["message"] or "No more items fit into the sell areas"
+                    break
+
+                if logger_callback:
+                    logger_callback(f"{current_vendor}: placed {placed_this_pass} item(s) in current sell batch")
+                if self._submit_vendor_sell_if_present(vendor_name=current_vendor, logger_callback=logger_callback):
+                    result["batches"] += 1
+                else:
+                    if logger_callback:
+                        logger_callback(f"{current_vendor}: sell button not visible; assuming item transfers were applied immediately")
+
+                if not self.open_third_inventory_bag(logger_callback=logger_callback):
+                    result["message"] = "Could not reopen third inventory bag after selling"
+                    break
+                if not self.open_vendor_sell_tab(current_vendor, logger_callback=logger_callback):
+                    result["message"] = f"Could not reopen {current_vendor} sell tab after selling"
+                    break
+
+                time.sleep(0.2)
+
+            if time.time() >= deadline and not result["message"]:
+                result["timed_out"] = True
+                result["message"] = "Sell mode timed out"
+
+            self.navigate_to_overview(logger_callback=logger_callback)
+            if not result["message"]:
+                result["message"] = "Sell mode completed"
+            return result
+        except Exception as e:
+            result["message"] = f"Error in Weapon smith sell mode: {e}"
+            try:
+                self.navigate_to_overview(logger_callback=logger_callback)
+            except Exception:
+                pass
+            return result
 
     def ensure_avatar_visible(self, logger_callback=None):
         """Select the standard battle doll so the avatar drop target is visible."""

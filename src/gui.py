@@ -534,9 +534,13 @@ class GladiatusGUI:
         self.bot = None
         self.login_thread = None
         self.play_thread = None
+        self.sell_thread = None
         self.playing = False
+        self.selling_active = False
+        self.sell_stop_requested = False
         self.captcha_detected = False
         self.captcha_solved = False
+        self.bot_action_lock = threading.RLock()
 
         self.status_var = tk.StringVar(value="Standby")
         self.hp_var = tk.StringVar(value="HP: --")
@@ -558,7 +562,7 @@ class GladiatusGUI:
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.dungeon_leave_cancel_on_failure_var = tk.BooleanVar(value=False)
         self.change_notes = [
-            {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
+            {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Battle report logging akisi expedition, dungeon ve Circus Turma icin eklendi; dungeon lose durumunda opsiyonel cancel davranisi baglandi ve Weapon smith uzerinden bag III sell maintenance modu eklendi."},
             {"issue_number": "41", "issue_title": "Polish custom window restore animations on Windows", "summary": "Windows'ta custom header korunarak taskbar minimize/restore animasyonlari daha yonlu ve yumusak hale getirildi; restore sirasi ustte flash azaltildi."},
             {"issue_number": "39", "issue_title": "Fix custom header window behavior on Windows", "summary": "Windows'ta custom header korunurken acilis flash'i, minimize, maximize ve Alt+Tab/taskbar gorunurlugu duzeltildi."},
             {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
@@ -1587,6 +1591,7 @@ class GladiatusGUI:
         panel = self._create_card(parent, 1, 0, pady=(0, 12))
         panel.columnconfigure(0, weight=1)
         panel.columnconfigure(1, weight=1)
+        panel.columnconfigure(2, weight=1)
 
         tk.Label(panel, text="Control Deck", bg=self.PANEL, fg=self.TEXT, font=("Bahnschrift SemiBold", 16)).grid(row=0, column=0, sticky="w")
         tk.Label(
@@ -1595,7 +1600,7 @@ class GladiatusGUI:
             bg=self.PANEL,
             fg=self.MUTED,
             font=("Segoe UI", 10),
-        ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(6, 16))
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 16))
 
         self.play_btn = ThemedButton(panel, "Start Automation", self.toggle_play, variant="primary")
         self.play_btn.grid(row=2, column=0, sticky="ew")
@@ -1604,8 +1609,11 @@ class GladiatusGUI:
         self.stop_btn.grid(row=2, column=1, sticky="ew", padx=(12, 0))
         self.stop_btn.config(state="disabled")
 
+        self.sell_btn = ThemedButton(panel, "Sell Items", self.start_sell_mode, variant="secondary")
+        self.sell_btn.grid(row=2, column=2, sticky="ew", padx=(12, 0))
+
         pulse_border, pulse = self._create_subcard(panel, bg=self.PANEL_SOFT, padx=14, pady=14)
-        pulse_border.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(16, 0))
+        pulse_border.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(16, 0))
         for idx, (title, value, color) in enumerate(
             (
                 ("Cycle", "60s pulse", self.ACCENT_SOFT),
@@ -2227,18 +2235,30 @@ class GladiatusGUI:
     def _set_captcha_enabled(self, enabled):
         self.captcha_btn.config(state="normal" if enabled else "disabled")
 
-    def _set_play_state(self, playing):
-        if playing:
+    def _refresh_runtime_controls(self):
+        if self.selling_active:
+            self.play_btn.config(text="Automation Paused", state="disabled")
+            self.stop_btn.config(state="normal")
+            self.sell_btn.config(text="Selling Items...", state="disabled")
+            self.mode_value.config(text="Sell maintenance active", fg=self.WARNING)
+            self.loop_value.config(text="Selling bag III via Weapon smith", fg=self.WARNING)
+        elif self.playing:
             self.play_btn.config(text="Automation Running", state="disabled")
             self.stop_btn.config(state="normal")
+            self.sell_btn.config(text="Sell Items", state="normal")
             self.mode_value.config(text="Auto mode active", fg=self.SUCCESS)
             self.loop_value.config(text="Pulse is live", fg=self.ACCENT_SOFT)
         else:
             self.play_btn.config(text="Start Automation", state="normal")
             self.stop_btn.config(state="disabled")
+            self.sell_btn.config(text="Sell Items", state="normal")
             self.mode_value.config(text="Idle", fg=self.MUTED)
             self.loop_value.config(text="Dongu bekliyor", fg=self.MUTED)
         self._refresh_overview()
+
+    def _set_play_state(self, playing):
+        self.playing = bool(playing)
+        self._ui(self._refresh_runtime_controls)
 
     def start_login(self):
         email = self.email_entry.get().strip()
@@ -2376,7 +2396,8 @@ class GladiatusGUI:
         try:
             if not self.bot:
                 return
-            hp = self.bot.get_hp_status()
+            with self.bot_action_lock:
+                hp = self.bot.get_hp_status()
             if hp and hp.get("current") is not None and hp.get("max") is not None:
                 text = f"HP: {hp['current']} / {hp['max']} ({hp['percent']}%)"
             elif hp and hp.get("percent") is not None:
@@ -2394,7 +2415,8 @@ class GladiatusGUI:
                 self.set_hp_refill_count(None)
                 return
 
-            count = self.bot.get_healing_item_count(logger_callback=None)
+            with self.bot_action_lock:
+                count = self.bot.get_healing_item_count(logger_callback=None)
             self.set_hp_refill_count(count)
         except Exception:
             pass
@@ -2484,8 +2506,10 @@ class GladiatusGUI:
         if not self.bot:
             messagebox.showerror("Error", "Bot not running. Please login first.")
             return
+        if self.selling_active:
+            self.append_log("Sell mode is active; automation start is locked")
+            return
         if not self.playing:
-            self.playing = True
             self._set_play_state(True)
             self.update_status("Playing...", self.SUCCESS)
             self.append_log("Play started")
@@ -2495,11 +2519,65 @@ class GladiatusGUI:
             self.stop_play()
 
     def stop_play(self):
+        if self.selling_active:
+            self.sell_stop_requested = True
+            self.append_log("Sell mode stop requested; waiting for a safe step")
         if self.playing:
-            self.playing = False
+            self._set_play_state(False)
             self.update_status("Stopped", self.WARNING)
             self.append_log("Play stopped by user")
-        self._ui(lambda: self._set_play_state(False))
+        elif self.selling_active:
+            self.update_status("Stopping sell mode...", self.WARNING)
+            self._ui(self._refresh_runtime_controls)
+
+    def start_sell_mode(self):
+        if not self.bot:
+            messagebox.showerror("Error", "Bot not running. Please login first.")
+            return
+        if self.selling_active:
+            self.append_log("Sell mode is already running")
+            return
+
+        self.selling_active = True
+        self.sell_stop_requested = False
+        self.update_status("Selling items...", self.WARNING)
+        self.append_log("Sell mode queued: bag III -> Weapon smith")
+        self._ui(self._refresh_runtime_controls)
+        self.sell_thread = threading.Thread(target=self.sell_worker, daemon=True)
+        self.sell_thread.start()
+
+    def sell_worker(self):
+        try:
+            with self.bot_action_lock:
+                if not self.bot:
+                    self.append_log("Sell mode aborted: bot instance missing")
+                    return
+                result = self.bot.run_weapon_smith_sell_mode(
+                    max_duration_seconds=300,
+                    should_stop_callback=lambda: self.sell_stop_requested,
+                    logger_callback=self.append_log,
+                )
+            message = (result or {}).get("message") or "Sell mode completed"
+            self.append_log(message)
+            if (result or {}).get("timed_out"):
+                self.update_status("Sell timeout", self.WARNING)
+            elif (result or {}).get("stopped"):
+                self.update_status("Sell stopped", self.WARNING)
+            else:
+                self.update_status("Sell mode complete", self.SUCCESS)
+        except Exception as exc:
+            self.append_log(f"Sell mode error: {exc}")
+            self.update_status("Sell mode failed", self.DANGER)
+        finally:
+            self.selling_active = False
+            self.sell_stop_requested = False
+            self.refresh_hp_label()
+            self.refresh_hp_refill_count()
+            if self.playing:
+                self.update_status("Playing...", self.SUCCESS)
+            else:
+                self.update_status("Ready", self.ACCENT)
+            self._ui(self._refresh_runtime_controls)
 
     def play_loop(self):
         while self.playing:
@@ -2509,35 +2587,45 @@ class GladiatusGUI:
                     self.playing = False
                     break
 
+                if self.selling_active:
+                    self._ui(self._refresh_runtime_controls)
+                    while self.playing and self.selling_active:
+                        time.sleep(0.5)
+                    continue
+
                 min_hp = self.get_min_hp_percent()
 
                 if self.recovery_buy_refill_var.get():
                     try:
-                        self.bot.attempt_buy_refill_pots_if_needed(
-                            min_item_count=self.get_recovery_threshold(),
-                            logger_callback=self.append_log,
-                            count_update_callback=self.set_hp_refill_count,
-                        )
+                        with self.bot_action_lock:
+                            self.bot.attempt_buy_refill_pots_if_needed(
+                                min_item_count=self.get_recovery_threshold(),
+                                logger_callback=self.append_log,
+                                count_update_callback=self.set_hp_refill_count,
+                            )
                     except Exception as exc:
                         self.append_log(f"Recovery refill buy error: {exc}")
 
                 if self.refill_hp_var.get():
                     try:
-                        self.bot.attempt_refill_hp_if_needed(
-                            min_hp_percent=min_hp, logger_callback=self.append_log
-                        )
+                        with self.bot_action_lock:
+                            self.bot.attempt_refill_hp_if_needed(
+                                min_hp_percent=min_hp, logger_callback=self.append_log
+                            )
                     except Exception as exc:
                         self.append_log(f"Refill HP error: {exc}")
 
-                hp_ready = self.bot.is_hp_above_threshold(min_hp)
+                with self.bot_action_lock:
+                    hp_ready = self.bot.is_hp_above_threshold(min_hp)
 
                 if self.expedition_var.get():
                     if hp_ready:
-                        self.bot.attempt_expedition_if_ready(
-                            expedition_location=self.get_expedition_location(),
-                            expedition_target=self.get_expedition_target(),
-                            logger_callback=self.append_log,
-                        )
+                        with self.bot_action_lock:
+                            self.bot.attempt_expedition_if_ready(
+                                expedition_location=self.get_expedition_location(),
+                                expedition_target=self.get_expedition_target(),
+                                logger_callback=self.append_log,
+                            )
                     else:
                         self.append_log(f"HP at or below {min_hp}%, skipping expedition")
                 else:
@@ -2545,12 +2633,13 @@ class GladiatusGUI:
 
                 if self.dungeon_var.get():
                     try:
-                        self.bot.attempt_dungeon_if_ready(
-                            dungeon_location=self.get_dungeon_location(),
-                            dungeon_difficulty=self.get_dungeon_difficulty(),
-                            cancel_on_failure=self.get_dungeon_leave_cancel_on_failure(),
-                            logger_callback=self.append_log,
-                        )
+                        with self.bot_action_lock:
+                            self.bot.attempt_dungeon_if_ready(
+                                dungeon_location=self.get_dungeon_location(),
+                                dungeon_difficulty=self.get_dungeon_difficulty(),
+                                cancel_on_failure=self.get_dungeon_leave_cancel_on_failure(),
+                                logger_callback=self.append_log,
+                            )
                     except Exception as exc:
                         self.append_log(f"Dungeon attempt error: {exc}")
                 else:
@@ -2558,7 +2647,8 @@ class GladiatusGUI:
 
                 if self.circus_var.get():
                     try:
-                        self.bot.attempt_circus_if_ready(logger_callback=self.append_log)
+                        with self.bot_action_lock:
+                            self.bot.attempt_circus_if_ready(logger_callback=self.append_log)
                     except Exception as exc:
                         self.append_log(f"Circus Turma attempt error: {exc}")
                 else:
@@ -2572,11 +2662,14 @@ class GladiatusGUI:
             for remaining in range(60, 0, -1):
                 if not self.playing:
                     break
+                if self.selling_active:
+                    break
                 self._ui(lambda value=remaining: self.loop_value.config(text=f"Sonraki tur {value}s", fg=self.MUTED))
                 time.sleep(1)
 
-        self._ui(lambda: self._set_play_state(False))
-        self.update_status("Ready", self.ACCENT)
+        self._set_play_state(False)
+        if not self.selling_active:
+            self.update_status("Ready", self.ACCENT)
 
     def update_status(self, text, color):
         self._ui(lambda: self._set_status(text, color))
