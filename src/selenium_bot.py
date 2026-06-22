@@ -224,6 +224,8 @@ class GladiatusBot:
             (By.XPATH, "//button[contains(@onclick,'MAX_simplepop') or contains(normalize-space(.),'Close') or normalize-space(.)='x']"),
             (By.CSS_SELECTOR, ".openX_int_closeButton a"),
             (By.XPATH, "//div[contains(@class,'openX_interstitial')]//a[contains(@onclick,'close') or normalize-space(text())='x']"),
+            (By.CSS_SELECTOR, "#back_to_safety"),
+            (By.XPATH, "//button[@id='back_to_safety' or contains(@onclick,'removeModal')]"),
             (By.CSS_SELECTOR, "#blackoutDialognotification .blackoutDialog_buttons input[type='submit']"),
             (By.CSS_SELECTOR, "#blackoutDialognotification #linknotification"),
             (By.CSS_SELECTOR, "#blackoutDialognotification #linkcancelnotification"),
@@ -239,7 +241,7 @@ class GladiatusBot:
                     for el in elements:
                         if el.is_displayed() and el.is_enabled():
                             try:
-                                el.click()
+                                self._safe_click(el)
                                 closed_any = True
                                 time.sleep(0.2)
                             except Exception:
