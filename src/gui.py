@@ -557,6 +557,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "47", "issue_title": "Handle Return to Safety overlay", "summary": "Back to Safety butonu close_overlays akishina eklendi; return-to-safety modal'i back_to_safety ve removeModal selector'lari ile kapatiliyor."},
             {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
             {"issue_number": "41", "issue_title": "Polish custom window restore animations on Windows", "summary": "Windows'ta custom header korunarak taskbar minimize/restore animasyonlari daha yonlu ve yumusak hale getirildi; restore sirasi ustte flash azaltildi."},
             {"issue_number": "39", "issue_title": "Fix custom header window behavior on Windows", "summary": "Windows'ta custom header korunurken acilis flash'i, minimize, maximize ve Alt+Tab/taskbar gorunurlugu duzeltildi."},
@@ -566,15 +567,6 @@ class GladiatusGUI:
             {"issue_number": "25", "issue_title": "Premium GUI refresh", "summary": "Arayuz daha elit bir control suite hissi verecek sekilde yeniden tasarlandi; vitrin alani, durum kartlari, daha guclu tipografi ve premium panel hiyerarsisi eklendi."},
             {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, Neler degisti kutusu Activity Log stiliyle ust baslikli hale getirildi ve scroll eklendi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
             {"issue_number": "18", "issue_title": "Add recovery tab and refill pot purchasing", "summary": "Recovery akisi shop'tan refill pot satin alma ve sayi dogrulama ile calisiyor."},
-            "Dungeon akisi lokasyon secimi ve zorluk secimi ile ayrildi.",
-            "Expedition ayarlari kendi tabina tasindi ve mob secimi korunuyor.",
-            "HP refill sayaci ana ekranda gorunuyor.",
-            "HP refill akisi ilk envanter bagini ve avatar hedefini kullaniyor.",
-            "Expedition country map uzerinden secili lokasyona gidiyor.",
-            "Dungeon secilen country map lokasyonunu acip rastgele saldiriyor.",
-            "Workflow issue-first, branch-per-task ve PR-only hale getirildi.",
-            "Main branch'e direkt pushlar engellendi.",
-            "PR'lar GLA project ve issue baglantisi ile takip ediliyor.",
         ]
         self._registered_dropdowns = []
 
