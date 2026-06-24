@@ -31,6 +31,7 @@ class GladiatusBot:
         "umpokta tribe": 4,
         "caravan": 5,
         "mesoai-oasis": 6,
+        "cliff jumper": 7,
     }
     DUNGEON_LOCATIONS = EXPEDITION_LOCATIONS
 
