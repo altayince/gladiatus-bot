@@ -551,6 +551,7 @@ class GladiatusGUI:
         self.circus_var = tk.BooleanVar(value=True)
         self.refill_hp_var = tk.BooleanVar(value=False)
         self.recovery_buy_refill_var = tk.BooleanVar(value=False)
+        self.leave_dungeon_on_defeat_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
         self.recovery_threshold_var = tk.StringVar(value="10")
         self.expedition_location_var = tk.StringVar(value="Grimwood")
@@ -558,6 +559,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "51", "issue_title": "Add leave dungeon on defeat option", "summary": "Dungeon sekmesine Leave dungeon on defeat checkbox'i eklendi; kayip battle report'tan sonra Cancel dungeon butonu opsiyonel olarak tiklanip sonraki tur icin dungeon cikisi temizleniyor."},
             {"issue_number": "49", "issue_title": "Add Cliff Jumper location support", "summary": "Country map expedition ve dungeon lokasyon listelerine Cliff Jumper eklendi; Selenium eslesmesi loc=7 olarak guncellendi ve dropdown'lar yeni secimi gosterecek sekilde senkronize edildi."},
             {"issue_number": "47", "issue_title": "Handle Return to Safety overlay", "summary": "Back to Safety butonu close_overlays akishina eklendi; return-to-safety modal'i back_to_safety ve removeModal selector'lari ile kapatiliyor."},
             {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
@@ -567,7 +569,6 @@ class GladiatusGUI:
             {"issue_number": "32", "issue_title": "Handle Daily Bonus overlay", "summary": "Login sonrası Daily Bonus popup'i close_overlays akishina eklendi; Collect Bonus dialogu botu kilitlemeden kapatiliyor."},
             {"issue_number": "30", "issue_title": "Fix collapsed controls regression in premium GUI", "summary": "Custom button ve dropdown wrapper'larinin coktugu regress duzeltildi; login/CAPTCHA ile play/stop butonlari geri geldi, lokasyon dropdown'lari yeniden gorunur oldu, acik dropdown'lar scroll sirasinda kapanir hale getirildi ve sag kolon hizasi toparlandi."},
             {"issue_number": "25", "issue_title": "Premium GUI refresh", "summary": "Arayuz daha elit bir control suite hissi verecek sekilde yeniden tasarlandi; vitrin alani, durum kartlari, daha guclu tipografi ve premium panel hiyerarsisi eklendi."},
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, Neler degisti kutusu Activity Log stiliyle ust baslikli hale getirildi ve scroll eklendi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
         ]
         self._registered_dropdowns = []
 
@@ -1913,6 +1914,28 @@ class GladiatusGUI:
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
+        leave_border, leave_card = self._create_subcard(panel, bg=self.PANEL_SOFT, padx=12, pady=12)
+        leave_border.grid(row=4, column=0, sticky="ew", pady=(14, 0))
+        leave_card.columnconfigure(0, weight=1)
+        ThemedCheckbox(
+            leave_card,
+            "Leave dungeon on defeat",
+            self.leave_dungeon_on_defeat_var,
+            bg_color=self.PANEL_SOFT,
+            text_color=self.TEXT,
+            muted_color=self.MUTED,
+            accent_color=self.ACCENT_SOFT,
+        ).grid(row=0, column=0, sticky="w")
+        tk.Label(
+            leave_card,
+            text="Kayip battle report sonrasinda Cancel dungeon ile cikis yapar; sonraki tur dungeon'a yeniden girer.",
+            bg=self.PANEL_SOFT,
+            fg=self.MUTED,
+            font=("Segoe UI", 9),
+            wraplength=320,
+            justify="left",
+        ).grid(row=1, column=0, sticky="w", padx=(26, 0), pady=(4, 0))
+
     def _build_log_panel(self, parent):
         panel = self._create_card(parent, 0, 0, pady=(0, 12), padding=25)
         panel.columnconfigure(0, weight=1)
@@ -2085,6 +2108,7 @@ class GladiatusGUI:
             self.circus_var,
             self.refill_hp_var,
             self.recovery_buy_refill_var,
+            self.leave_dungeon_on_defeat_var,
             self.hp_min_var,
             self.recovery_threshold_var,
             self.expedition_location_var,
@@ -2107,6 +2131,7 @@ class GladiatusGUI:
             "circus": bool(self.circus_var.get()),
             "refill_hp": bool(self.refill_hp_var.get()),
             "recovery_buy_refill": bool(self.recovery_buy_refill_var.get()),
+            "leave_dungeon_on_defeat": bool(self.leave_dungeon_on_defeat_var.get()),
             "hp_min": self.hp_min_var.get().strip() or "25",
             "recovery_threshold": self.recovery_threshold_var.get().strip() or "10",
             "expedition_location": self.get_expedition_location(),
@@ -2143,6 +2168,7 @@ class GladiatusGUI:
             self.circus_var.set(self._coerce_bool(data.get("circus"), True))
             self.refill_hp_var.set(self._coerce_bool(data.get("refill_hp"), False))
             self.recovery_buy_refill_var.set(self._coerce_bool(data.get("recovery_buy_refill"), False))
+            self.leave_dungeon_on_defeat_var.set(self._coerce_bool(data.get("leave_dungeon_on_defeat"), False))
 
             hp_min = data.get("hp_min", "25")
             self.hp_min_var.set(str(hp_min))
@@ -2522,6 +2548,7 @@ class GladiatusGUI:
                             dungeon_location=self.get_dungeon_location(),
                             dungeon_difficulty=self.get_dungeon_difficulty(),
                             logger_callback=self.append_log,
+                            leave_dungeon_on_defeat=self.leave_dungeon_on_defeat_var.get(),
                         )
                     except Exception as exc:
                         self.append_log(f"Dungeon attempt error: {exc}")
