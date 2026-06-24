@@ -1752,8 +1752,30 @@ class GladiatusGUI:
                 font=("Segoe UI Semibold", 10),
             ).grid(row=0, column=idx + 1, sticky="w", padx=(0, 12))
 
+        leave_row = tk.Frame(dungeon, bg=self.PANEL_ALT)
+        leave_row.grid(row=4, column=0, sticky="ew", pady=(14, 0))
+        leave_row.columnconfigure(0, weight=1)
+        ThemedCheckbox(
+            leave_row,
+            "Leave dungeon on defeat",
+            self.leave_dungeon_on_defeat_var,
+            bg_color=self.PANEL_ALT,
+            text_color=self.TEXT,
+            muted_color=self.MUTED,
+            accent_color=self.ACCENT_SOFT,
+        ).grid(row=0, column=0, sticky="w")
+        tk.Label(
+            leave_row,
+            text="Kayip battle report sonrasinda Cancel dungeon ile cikis yapar; sonraki tur dungeon'a yeniden girer.",
+            bg=self.PANEL_ALT,
+            fg=self.MUTED,
+            font=("Segoe UI", 9),
+            wraplength=320,
+            justify="left",
+        ).grid(row=1, column=0, sticky="w", padx=(26, 0), pady=(4, 0))
+
         recovery_header = tk.Frame(panel, bg=self.PANEL)
-        recovery_header.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(22, 10))
+        recovery_header.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(22, 10))
         tk.Label(recovery_header, text="Recovery Automation", bg=self.PANEL, fg=self.TEXT, font=("Segoe UI Semibold", 13)).grid(row=0, column=0, sticky="w")
         tk.Label(
             recovery_header,
@@ -1764,7 +1786,7 @@ class GladiatusGUI:
         ).grid(row=1, column=0, sticky="w", pady=(4, 0))
 
         recovery_left_border, recovery_left = self._create_subcard(panel, bg=self.PANEL_ALT, padx=16, pady=16)
-        recovery_left_border.grid(row=5, column=0, sticky="ew", padx=(0, 9))
+        recovery_left_border.grid(row=6, column=0, sticky="ew", padx=(0, 9))
         recovery_left.columnconfigure(1, weight=1)
         ThemedCheckbox(
             recovery_left,
@@ -1913,28 +1935,6 @@ class GladiatusGUI:
                 selectcolor="#0b1220",
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
-
-        leave_row = tk.Frame(panel, bg=self.PANEL)
-        leave_row.grid(row=4, column=0, sticky="ew", pady=(14, 0))
-        leave_row.columnconfigure(0, weight=1)
-        ThemedCheckbox(
-            leave_row,
-            "Leave dungeon on defeat",
-            self.leave_dungeon_on_defeat_var,
-            bg_color=self.PANEL,
-            text_color=self.TEXT,
-            muted_color=self.MUTED,
-            accent_color=self.ACCENT_SOFT,
-        ).grid(row=0, column=0, sticky="w")
-        tk.Label(
-            leave_row,
-            text="Kayip battle report sonrasinda Cancel dungeon ile cikis yapar; sonraki tur dungeon'a yeniden girer.",
-            bg=self.PANEL,
-            fg=self.MUTED,
-            font=("Segoe UI", 9),
-            wraplength=320,
-            justify="left",
-        ).grid(row=1, column=0, sticky="w", padx=(26, 0), pady=(4, 0))
 
     def _build_log_panel(self, parent):
         panel = self._create_card(parent, 0, 0, pady=(0, 12), padding=25)
