@@ -1914,22 +1914,22 @@ class GladiatusGUI:
                 font=("Segoe UI", 10),
             ).grid(row=0, column=idx, sticky="w", padx=(0, 12))
 
-        leave_border, leave_card = self._create_subcard(panel, bg=self.PANEL_SOFT, padx=12, pady=12)
-        leave_border.grid(row=4, column=0, sticky="ew", pady=(14, 0))
-        leave_card.columnconfigure(0, weight=1)
+        leave_row = tk.Frame(panel, bg=self.PANEL)
+        leave_row.grid(row=4, column=0, sticky="ew", pady=(14, 0))
+        leave_row.columnconfigure(0, weight=1)
         ThemedCheckbox(
-            leave_card,
+            leave_row,
             "Leave dungeon on defeat",
             self.leave_dungeon_on_defeat_var,
-            bg_color=self.PANEL_SOFT,
+            bg_color=self.PANEL,
             text_color=self.TEXT,
             muted_color=self.MUTED,
             accent_color=self.ACCENT_SOFT,
         ).grid(row=0, column=0, sticky="w")
         tk.Label(
-            leave_card,
+            leave_row,
             text="Kayip battle report sonrasinda Cancel dungeon ile cikis yapar; sonraki tur dungeon'a yeniden girer.",
-            bg=self.PANEL_SOFT,
+            bg=self.PANEL,
             fg=self.MUTED,
             font=("Segoe UI", 9),
             wraplength=320,
