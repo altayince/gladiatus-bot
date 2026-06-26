@@ -2196,6 +2196,29 @@ class GladiatusBot:
                 logger_callback(f"Error cancelling dungeon: {e}")
             return False
 
+    def _reopen_dungeon_before_cancel(self, dungeon_location, logger_callback=None):
+        """Return to the dungeon page flow so Cancel dungeon is available."""
+        try:
+            if logger_callback:
+                logger_callback("Re-opening dungeon location before cancel...")
+            if not self.ensure_game_tab():
+                if logger_callback:
+                    logger_callback("Could not find game tab while preparing dungeon cancel")
+                return False
+            if not self.open_dungeon_location(dungeon_location, logger_callback=logger_callback):
+                if logger_callback:
+                    logger_callback("Could not re-open dungeon location before cancel")
+                return False
+            if not self.open_dungeon_tab(logger_callback=logger_callback):
+                if logger_callback:
+                    logger_callback("Could not re-open dungeon tab before cancel")
+                return False
+            return True
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error re-opening dungeon before cancel: {e}")
+            return False
+
     def click_expedition_target(self, expedition_target=1, logger_callback=None):
         """Click the selected expedition target by 1-based expedition box index."""
         try:
@@ -2394,8 +2417,11 @@ class GladiatusBot:
                         info["battle_report"] = self._capture_and_log_battle_report("dungeon", logger_callback=logger_callback, timeout=10)
                         if leave_dungeon_on_defeat and info["battle_report"] and info["battle_report"].get("won") is False:
                             if logger_callback:
-                                logger_callback("Dungeon lost — cancelling dungeon to leave it...")
-                            info["dungeon_cancelled"] = self._cancel_dungeon(logger_callback=logger_callback)
+                                logger_callback("Dungeon lost - reopening dungeon and cancelling it...")
+                            if self._reopen_dungeon_before_cancel(dungeon_location, logger_callback=logger_callback):
+                                info["dungeon_cancelled"] = self._cancel_dungeon(logger_callback=logger_callback)
+                            else:
+                                info["dungeon_cancelled"] = False
                             if not info["dungeon_cancelled"] and logger_callback:
                                 logger_callback("Dungeon cancel action not confirmed")
                         self.navigate_to_overview(logger_callback=logger_callback)
@@ -2662,3 +2688,4 @@ class GladiatusBot:
             self.driver.quit()
         except Exception:
             pass
+
