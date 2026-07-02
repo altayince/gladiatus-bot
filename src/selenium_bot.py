@@ -6,11 +6,13 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
+import shutil
+import os
 import time
 import logging
 import random
 import re
+from webdriver_manager.chrome import ChromeDriverManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,9 +43,34 @@ class GladiatusBot:
             options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        service = Service(ChromeDriverManager().install())
-        self.driver = webdriver.Chrome(service=service, options=options)
+        self.driver = self._create_driver(options)
         self.wait = WebDriverWait(self.driver, timeout)
+
+    def _create_driver(self, options):
+        """Prefer local or Selenium-managed Chrome drivers before webdriver-manager."""
+        env_driver_path = os.environ.get("CHROMEDRIVER_PATH", "").strip()
+        if env_driver_path:
+            logging.info("Using CHROMEDRIVER_PATH at %s", env_driver_path)
+            return webdriver.Chrome(service=Service(env_driver_path), options=options)
+
+        driver_path = shutil.which("chromedriver")
+        if driver_path:
+            logging.info("Using local chromedriver at %s", driver_path)
+            return webdriver.Chrome(service=Service(driver_path), options=options)
+
+        # Try Selenium Manager before webdriver-manager to avoid a blocking version lookup.
+        try:
+            logging.info("Trying Selenium Manager for ChromeDriver")
+            return webdriver.Chrome(options=options)
+        except Exception as selenium_manager_error:
+            logging.warning("Selenium Manager ChromeDriver startup failed: %s", selenium_manager_error)
+
+        try:
+            logging.info("Falling back to webdriver-manager ChromeDriver download")
+            service = Service(ChromeDriverManager().install())
+            return webdriver.Chrome(service=service, options=options)
+        except Exception as exc:
+            raise RuntimeError(f"Could not start Chrome driver: {exc}") from exc
 
     def _click_element(self, by, value, timeout=10):
         for attempt in range(3):
