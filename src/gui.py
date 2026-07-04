@@ -1689,7 +1689,7 @@ class GladiatusGUI:
         self.location_combo.grid(row=0, column=1, sticky="ew")
 
         choice_box = tk.Frame(expedition, bg=self.PANEL_ALT)
-        choice_box.grid(row=3, column=0, sticky="ew", pady=(16, 0))
+        choice_box.grid(row=3, column=0, sticky="ew", pady=(12, 0))
         choice_box.columnconfigure(0, weight=1)
         choice_box.columnconfigure(1, weight=1)
 
@@ -1703,7 +1703,7 @@ class GladiatusGUI:
             row = idx // 2
             col = idx % 2
             option_border, option_card = self._create_subcard(choice_box, bg=self.PANEL_SOFT, padx=12, pady=12)
-            option_border.grid(row=row, column=col, sticky="ew", padx=(0, 12 if col == 0 else 0), pady=(0, 12))
+            option_border.grid(row=row, column=col, sticky="ew", padx=(0, 12 if col == 0 else 0), pady=(0, 10 if row == 0 else 0))
             tk.Radiobutton(
                 option_card,
                 text=label,
