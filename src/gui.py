@@ -1634,10 +1634,8 @@ class GladiatusGUI:
 
         attack_grid = tk.Frame(panel, bg=self.PANEL)
         attack_grid.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(0, 18))
-        for col in range(2):
+        for col in range(4):
             attack_grid.columnconfigure(col, weight=1)
-        attack_grid.rowconfigure(0, weight=1)
-        attack_grid.rowconfigure(1, weight=1)
         attack_cards = [
             ("Expedition", self.expedition_var, "Lokasyon + mob hedefi ile kontrollu farm."),
             ("Dungeon", self.dungeon_var, "Sehir haritasi uzerinden secili bolgeye akilli dalis."),
@@ -1646,17 +1644,9 @@ class GladiatusGUI:
         ]
         for idx, (title, variable, description) in enumerate(attack_cards):
             border, card = self._create_subcard(attack_grid)
-            row = idx // 2
-            col = idx % 2
-            border.grid(
-                row=row,
-                column=col,
-                sticky="nsew",
-                padx=(0, 9 if col == 0 else 0),
-                pady=(0, 12 if row == 0 else 0),
-            )
+            border.grid(row=0, column=idx, sticky="nsew", padx=(0, 10 if idx < 3 else 0))
             ThemedCheckbox(card, title, variable, bg_color=self.PANEL_ALT, text_color=self.TEXT, muted_color=self.MUTED, accent_color=self.ACCENT_SOFT).grid(row=0, column=0, sticky="w")
-            tk.Label(card, text=description, bg=self.PANEL_ALT, fg=self.MUTED, font=("Segoe UI", 9), wraplength=260, justify="left").grid(row=1, column=0, sticky="w", pady=(8, 0))
+            tk.Label(card, text=description, bg=self.PANEL_ALT, fg=self.MUTED, font=("Segoe UI", 9), wraplength=180, justify="left").grid(row=1, column=0, sticky="w", pady=(8, 0))
 
         expedition_border, expedition = self._create_subcard(panel, padx=18, pady=18)
         expedition_border.grid(row=3, column=0, sticky="nsew", pady=(18, 0), padx=(0, 9))
