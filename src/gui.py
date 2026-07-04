@@ -543,12 +543,13 @@ class GladiatusGUI:
         self.hp_var = tk.StringVar(value="HP: --")
         self.hp_refill_count_var = tk.StringVar(value="Refill pots: --")
         self.session_var = tk.StringVar(value="Awaiting secure login")
-        self.combat_profile_var = tk.StringVar(value="Expedition / Dungeon / Circus")
+        self.combat_profile_var = tk.StringVar(value="Expedition / Dungeon / Circus / Arena")
         self.sustain_profile_var = tk.StringVar(value="Manual sustain")
 
         self.expedition_var = tk.BooleanVar(value=True)
         self.dungeon_var = tk.BooleanVar(value=True)
         self.circus_var = tk.BooleanVar(value=True)
+        self.arena_var = tk.BooleanVar(value=True)
         self.refill_hp_var = tk.BooleanVar(value=False)
         self.recovery_buy_refill_var = tk.BooleanVar(value=False)
         self.hp_min_var = tk.StringVar(value="25")
@@ -558,6 +559,8 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "53", "issue_title": "Add arena mechanic support", "summary": "Arena modu Circus Turma ile ayni akisa baglandi; ilk navigasyon linki degistirildi, own2 tablosundan en dusuk seviyeli rakip seciliyor ve mekanik GUI checkbox/settings ile yonetiliyor."},
+            {"issue_number": "51", "issue_title": "Add leave dungeon on defeat option", "summary": "Dungeon sekmesine Leave dungeon on defeat checkbox'i eklendi; kayip battle report'tan sonra Cancel dungeon butonu opsiyonel olarak tiklanip sonraki tur icin dungeon cikisi temizleniyor."},
             {"issue_number": "49", "issue_title": "Add Cliff Jumper location support", "summary": "Country map expedition ve dungeon lokasyon listelerine Cliff Jumper eklendi; Selenium eslesmesi loc=7 olarak guncellendi ve dropdown'lar yeni secimi gosterecek sekilde senkronize edildi."},
             {"issue_number": "47", "issue_title": "Handle Return to Safety overlay", "summary": "Back to Safety butonu close_overlays akishina eklendi; return-to-safety modal'i back_to_safety ve removeModal selector'lari ile kapatiliyor."},
             {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
@@ -1503,6 +1506,8 @@ class GladiatusGUI:
             enabled_modes.append("Dungeon")
         if self.circus_var.get():
             enabled_modes.append("Circus")
+        if self.arena_var.get():
+            enabled_modes.append("Arena")
         self.combat_profile_var.set(" / ".join(enabled_modes) if enabled_modes else "No mechanics selected")
 
         sustain_rules = []
@@ -1629,12 +1634,13 @@ class GladiatusGUI:
 
         attack_grid = tk.Frame(panel, bg=self.PANEL)
         attack_grid.grid(row=2, column=0, columnspan=2, sticky="ew")
-        for col in range(3):
+        for col in range(4):
             attack_grid.columnconfigure(col, weight=1)
         attack_cards = [
             ("Expedition", self.expedition_var, "Lokasyon + mob hedefi ile kontrollu farm."),
             ("Dungeon", self.dungeon_var, "Sehir haritasi uzerinden secili bolgeye akilli dalis."),
-            ("Circus Turma", self.circus_var, "Hazir oldugunda arena denemelerini otomatik yokla."),
+            ("Circus Turma", self.circus_var, "Circus tablosundan en dusuk seviyeli rakibi otomatik sec."),
+            ("Arena", self.arena_var, "Circus ile ayni rakip secimini kullanir; own2 tablosundan en dusuk seviyeyi vurur."),
         ]
         for idx, (title, variable, description) in enumerate(attack_cards):
             border, card = self._create_subcard(attack_grid)
@@ -2083,6 +2089,7 @@ class GladiatusGUI:
             self.expedition_var,
             self.dungeon_var,
             self.circus_var,
+            self.arena_var,
             self.refill_hp_var,
             self.recovery_buy_refill_var,
             self.hp_min_var,
@@ -2105,6 +2112,7 @@ class GladiatusGUI:
             "expedition": bool(self.expedition_var.get()),
             "dungeon": bool(self.dungeon_var.get()),
             "circus": bool(self.circus_var.get()),
+            "arena": bool(self.arena_var.get()),
             "refill_hp": bool(self.refill_hp_var.get()),
             "recovery_buy_refill": bool(self.recovery_buy_refill_var.get()),
             "hp_min": self.hp_min_var.get().strip() or "25",
@@ -2141,6 +2149,7 @@ class GladiatusGUI:
             self.expedition_var.set(self._coerce_bool(data.get("expedition"), True))
             self.dungeon_var.set(self._coerce_bool(data.get("dungeon"), True))
             self.circus_var.set(self._coerce_bool(data.get("circus"), True))
+            self.arena_var.set(self._coerce_bool(data.get("arena"), True))
             self.refill_hp_var.set(self._coerce_bool(data.get("refill_hp"), False))
             self.recovery_buy_refill_var.set(self._coerce_bool(data.get("recovery_buy_refill"), False))
 
@@ -2535,6 +2544,14 @@ class GladiatusGUI:
                         self.append_log(f"Circus Turma attempt error: {exc}")
                 else:
                     self.append_log("Circus Turma mechanic disabled")
+
+                if self.arena_var.get():
+                    try:
+                        self.bot.attempt_arena_if_ready(logger_callback=self.append_log)
+                    except Exception as exc:
+                        self.append_log(f"Arena attempt error: {exc}")
+                else:
+                    self.append_log("Arena mechanic disabled")
 
                 self.refresh_hp_label()
                 self.refresh_hp_refill_count()

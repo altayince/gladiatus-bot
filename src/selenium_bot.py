@@ -323,6 +323,81 @@ class GladiatusBot:
             time.sleep(poll_interval)
         return []
 
+    def _wait_for_server_arena_rows(self, table_id, timeout=10, poll_interval=0.5):
+        start = time.time()
+        selectors = (
+            f"#{table_id} tr",
+            f"table#{table_id} tr",
+            f"table[name='{table_id}'] tr",
+            f"section#{table_id} tr",
+        )
+        while time.time() - start < timeout:
+            try:
+                for selector in selectors:
+                    rows = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    if rows:
+                        return rows
+            except Exception:
+                pass
+            time.sleep(poll_interval)
+        return []
+
+    def _is_server_arena_ready(self, arena_label, href_tokens):
+        try:
+            label = (arena_label or "").strip().lower()
+
+            try:
+                text_els = self.driver.find_elements(By.CSS_SELECTOR, "[id^='cooldown_bar_text']")
+                for txt_el in text_els:
+                    try:
+                        if not txt_el.is_displayed():
+                            continue
+                        txt = (txt_el.text or "").strip().lower()
+                        if not txt:
+                            continue
+                        if label and label in txt:
+                            return True
+                        if label and txt.startswith(f"to {label}"):
+                            return True
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+            try:
+                fill_els = self.driver.find_elements(By.CSS_SELECTOR, "[id^='cooldown_bar_fill']")
+                for fill_el in fill_els:
+                    try:
+                        if not fill_el.is_displayed():
+                            continue
+                        cls = fill_el.get_attribute("class") or ""
+                        if "cooldown_bar_fill_ready" in cls:
+                            return True
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+            try:
+                link_els = self.driver.find_elements(By.CSS_SELECTOR, "a.cooldown_bar_link")
+                for link in link_els:
+                    try:
+                        if not link.is_displayed() or not link.is_enabled():
+                            continue
+                        href = (link.get_attribute("href") or "").lower()
+                        if not href:
+                            continue
+                        if all(token.lower() in href for token in href_tokens):
+                            return True
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+            return False
+        except Exception:
+            return False
+
     def _parse_number_from_text(self, text):
         if not text:
             return None
@@ -1040,52 +1115,34 @@ class GladiatusBot:
     def is_circus_ready(self):
         """Return True if the Circus Turma cooldown bar indicates readiness."""
         try:
-            try:
-                txt_el = self.driver.find_elements(By.ID, "cooldown_bar_text_ct")
-                if txt_el:
-                    txt = txt_el[0].text.strip().lower()
-                    if txt.startswith('to circus turma') or 'to circus turma' in txt:
-                        return True
-            except Exception:
-                pass
-
-            try:
-                fill_el = self.driver.find_elements(By.ID, "cooldown_bar_fill_ct")
-                if fill_el:
-                    cls = fill_el[0].get_attribute('class') or ''
-                    if 'cooldown_bar_fill_ready' in cls:
-                        return True
-            except Exception:
-                pass
-
-            try:
-                link_els = self.driver.find_elements(By.XPATH, "//a[contains(translate(normalize-space(.),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz'),'circus turma')]")
-                for link in link_els:
-                    if link.is_displayed() and link.is_enabled():
-                        return True
-            except Exception:
-                pass
-
-            return False
+            return self._is_server_arena_ready("circus turma", ["submod=serverarena", "atype=3"])
         except Exception:
             return False
 
-    def open_circus_and_attack_lowest_level(self, logger_callback=None, max_retries=3):
-        """Open Circus Turma page and attack the lowest level opponent."""
+    def is_arena_ready(self):
+        """Return True if the Arena cooldown bar indicates readiness."""
+        try:
+            return self._is_server_arena_ready("arena", ["submod=serverarena", "atype=2"])
+        except Exception:
+            return False
+
+    def _open_server_arena_and_attack_lowest_level(self, arena_label, arena_type, table_id, logger_callback=None, max_retries=3):
+        """Open a server arena page and attack the lowest level opponent."""
         try:
             if logger_callback:
-                logger_callback("Ensuring game tab is active for Circus Turma...")
+                logger_callback(f"Ensuring game tab is active for {arena_label}...")
 
             if not self.ensure_game_tab():
                 if logger_callback:
-                    logger_callback("Could not find game tab for Circus Turma")
+                    logger_callback(f"Could not find game tab for {arena_label}")
                 return False
 
             link = None
             candidates = [
-                (By.CSS_SELECTOR, "#cooldown_bar_ct a.cooldown_bar_link"),
-                (By.CSS_SELECTOR, "a.cooldown_bar_link[href*='aType=3']"),
-                (By.XPATH, "//a[contains(@href,'submod=serverArena') and contains(@href,'aType=3')]")
+                (By.CSS_SELECTOR, f"#cooldown_bar_ct a.cooldown_bar_link[href*='aType={arena_type}']"),
+                (By.CSS_SELECTOR, f"a.cooldown_bar_link[href*='submod=serverArena'][href*='aType={arena_type}']"),
+                (By.CSS_SELECTOR, f"a.cooldown_bar_link[href*='mod=arena'][href*='aType={arena_type}']"),
+                (By.XPATH, f"//a[contains(@href,'submod=serverArena') and contains(@href,'aType={arena_type}')]"),
             ]
             for by, sel in candidates:
                 try:
@@ -1101,40 +1158,44 @@ class GladiatusBot:
 
             if not link:
                 if logger_callback:
-                    logger_callback("Circus Turma link not found")
+                    logger_callback(f"{arena_label} link not found")
                 return False
 
             if not self._safe_click(link):
                 if logger_callback:
-                    logger_callback("Failed to click Circus Turma link")
+                    logger_callback(f"Failed to click {arena_label} link")
                 return False
 
             if not self._wait_for_page_context(
                 expected_elements=[
-                    (By.CSS_SELECTOR, "#own3 tr, table#own3 tr, table[name='own3'] tr"),
+                    (By.CSS_SELECTOR, f"#{table_id} tr, table#{table_id} tr, table[name='{table_id}'] tr, section#{table_id} tr"),
                 ],
-                url_keywords=["submod=serverarena", "atype=3"],
+                url_keywords=["submod=serverarena", f"atype={arena_type}"],
                 timeout=12,
             ):
                 if logger_callback:
-                    logger_callback("Circus Turma page did not open in time")
+                    logger_callback(f"{arena_label} page did not open in time")
                 return False
 
-            self._wait_for_circus_rows(timeout=10)
+            self._wait_for_server_arena_rows(table_id, timeout=10)
 
             tries = 0
             while tries < max_retries:
                 try:
-                    tables = self.driver.find_elements(By.CSS_SELECTOR, "#own3, table#own3, table[name='own3'], table[class*='arena']")
                     rows = []
-                    for table in tables:
+                    for selector in (
+                        f"#{table_id} tr",
+                        f"table#{table_id} tr",
+                        f"table[name='{table_id}'] tr",
+                        f"section#{table_id} tr",
+                    ):
                         try:
-                            rows.extend(table.find_elements(By.CSS_SELECTOR, "tr"))
+                            rows.extend(self.driver.find_elements(By.CSS_SELECTOR, selector))
                         except Exception:
                             continue
 
                     if not rows:
-                        rows = self.driver.find_elements(By.CSS_SELECTOR, "#own3 tr, table#own3 tr, table[name='own3'] tr, tr")
+                        rows = self.driver.find_elements(By.CSS_SELECTOR, "tr")
 
                     candidates = []
                     for row in rows:
@@ -1143,35 +1204,32 @@ class GladiatusBot:
                             if len(cols) < 3:
                                 continue
 
-                            # Determine a numeric level from row cells
                             level = None
-                            for col in cols:
-                                level = self._parse_number_from_text(col.text)
-                                if level is not None:
-                                    break
+                            if len(cols) > 1:
+                                level = self._parse_number_from_text(cols[1].text)
+                            if level is None:
+                                for col in cols:
+                                    level = self._parse_number_from_text(col.text)
+                                    if level is not None:
+                                        break
                             if level is None:
                                 continue
 
-                            # Prefer an explicit attack button, otherwise use the last clickable cell
                             attack_btn = None
                             try:
-                                attack_btn = row.find_element(By.CSS_SELECTOR, ".attack, button.attack, a.attack, div.attack")
+                                attack_btn = row.find_element(By.CSS_SELECTOR, ".attack, button.attack, a.attack, div.attack, input.attack")
                             except Exception:
-                                pass
+                                attack_btn = None
 
                             if not attack_btn or not attack_btn.is_displayed():
                                 try:
-                                    attack_btn = row.find_element(By.XPATH, ".//*[contains(@onclick,'attack') or contains(@onclick,'Fight') or contains(@onclick,'startFight') or contains(@onclick,'serverArena')]")
-                                except Exception:
-                                    attack_btn = None
-
-                            if not attack_btn or not attack_btn.is_displayed():
-                                # Fallback to any visible clickable element in the last cell
-                                try:
-                                    last_cell = cols[-1]
-                                    clickables = last_cell.find_elements(By.XPATH, ".//a|.//button|.//div|.//span")
+                                    clickables = row.find_elements(By.CSS_SELECTOR, "[onclick], a, button, div, span")
                                     for item in clickables:
-                                        if item.is_displayed() and item.is_enabled():
+                                        if not item.is_displayed() or not item.is_enabled():
+                                            continue
+                                        onclick = (item.get_attribute("onclick") or "").lower()
+                                        cls = (item.get_attribute("class") or "").lower()
+                                        if "attack" in cls or "serverarena" in onclick or "startprovinciarumfight" in onclick or "startfight" in onclick or "fight" in onclick:
                                             attack_btn = item
                                             break
                                 except Exception:
@@ -1198,9 +1256,9 @@ class GladiatusBot:
                         if not self._safe_click(chosen):
                             raise RuntimeError("click failed")
                         if logger_callback:
-                            logger_callback(f"Clicked Circus Turma attack for lowest level {lowest}")
+                            logger_callback(f"Clicked {arena_label} attack for lowest level {lowest}")
                         self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=15)
-                        self._capture_and_log_battle_report("circus turma", logger_callback=logger_callback, timeout=10)
+                        self._capture_and_log_battle_report(arena_label.lower(), logger_callback=logger_callback, timeout=10)
                         self.navigate_to_overview(logger_callback=logger_callback)
                         return True
                     except StaleElementReferenceException:
@@ -1217,12 +1275,32 @@ class GladiatusBot:
                     continue
 
             if logger_callback:
-                logger_callback("No Circus Turma attack button found after retries")
+                logger_callback(f"No {arena_label} attack button found after retries")
             return False
         except Exception as e:
             if logger_callback:
-                logger_callback(f"Error in open_circus_and_attack_lowest_level: {e}")
+                logger_callback(f"Error in _open_server_arena_and_attack_lowest_level: {e}")
             return False
+
+    def open_circus_and_attack_lowest_level(self, logger_callback=None, max_retries=3):
+        """Open Circus Turma page and attack the lowest level opponent."""
+        return self._open_server_arena_and_attack_lowest_level(
+            arena_label="Circus Turma",
+            arena_type=3,
+            table_id="own3",
+            logger_callback=logger_callback,
+            max_retries=max_retries,
+        )
+
+    def open_arena_and_attack_lowest_level(self, logger_callback=None, max_retries=3):
+        """Open Arena page and attack the lowest level opponent."""
+        return self._open_server_arena_and_attack_lowest_level(
+            arena_label="Arena",
+            arena_type=2,
+            table_id="own2",
+            logger_callback=logger_callback,
+            max_retries=max_retries,
+        )
 
     def attempt_circus_if_ready(self, logger_callback=None):
         info = {"clicked": False, "message": ""}
@@ -1251,6 +1329,37 @@ class GladiatusBot:
             return info
         except Exception as e:
             info["message"] = f"Error in attempt_circus_if_ready: {e}"
+            if logger_callback:
+                logger_callback(info["message"])
+            return info
+
+    def attempt_arena_if_ready(self, logger_callback=None):
+        info = {"clicked": False, "message": ""}
+        try:
+            if not self.ensure_game_tab():
+                info["message"] = "Could not find game tab for Arena"
+                if logger_callback:
+                    logger_callback(info["message"])
+                return info
+
+            ready = self.is_arena_ready()
+            if not ready:
+                info["message"] = "Arena not ready"
+                if logger_callback:
+                    logger_callback(info["message"])
+                return info
+
+            if logger_callback:
+                logger_callback("Arena ready - opening and clicking the lowest level opponent...")
+
+            clicked = self.open_arena_and_attack_lowest_level(logger_callback=logger_callback)
+            info["clicked"] = bool(clicked)
+            info["message"] = "Clicked" if clicked else "No clickable attack found"
+            if logger_callback:
+                logger_callback(info["message"])
+            return info
+        except Exception as e:
+            info["message"] = f"Error in attempt_arena_if_ready: {e}"
             if logger_callback:
                 logger_callback(info["message"])
             return info
