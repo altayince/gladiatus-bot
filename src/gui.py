@@ -559,6 +559,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "55", "issue_title": "Fix arena cooldown link detection", "summary": "Arena cooldown bari artik kendi container'inda okunuyor; mod=arena cooldown linki ve gorunmeyen overlay anchor Selenium tarafinda tiklanabiliyor, arena acildiginda own2 listesindeki en dusuk seviyeli rakip yeniden secilip saldiriliyor."},
             {"issue_number": "53", "issue_title": "Add arena mechanic support", "summary": "Arena modu Circus Turma ile ayni akisa baglandi; ilk navigasyon linki degistirildi, own2 tablosundan en dusuk seviyeli rakip seciliyor ve mekanik GUI checkbox/settings ile yonetiliyor."},
             {"issue_number": "51", "issue_title": "Add leave dungeon on defeat option", "summary": "Dungeon sekmesine Leave dungeon on defeat checkbox'i eklendi; kayip battle report'tan sonra Cancel dungeon butonu opsiyonel olarak tiklanip sonraki tur icin dungeon cikisi temizleniyor."},
             {"issue_number": "49", "issue_title": "Add Cliff Jumper location support", "summary": "Country map expedition ve dungeon lokasyon listelerine Cliff Jumper eklendi; Selenium eslesmesi loc=7 olarak guncellendi ve dropdown'lar yeni secimi gosterecek sekilde senkronize edildi."},
@@ -568,9 +569,6 @@ class GladiatusGUI:
             {"issue_number": "39", "issue_title": "Fix custom header window behavior on Windows", "summary": "Windows'ta custom header korunurken acilis flash'i, minimize, maximize ve Alt+Tab/taskbar gorunurlugu duzeltildi."},
             {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
             {"issue_number": "32", "issue_title": "Handle Daily Bonus overlay", "summary": "Login sonrası Daily Bonus popup'i close_overlays akishina eklendi; Collect Bonus dialogu botu kilitlemeden kapatiliyor."},
-            {"issue_number": "30", "issue_title": "Fix collapsed controls regression in premium GUI", "summary": "Custom button ve dropdown wrapper'larinin coktugu regress duzeltildi; login/CAPTCHA ile play/stop butonlari geri geldi, lokasyon dropdown'lari yeniden gorunur oldu, acik dropdown'lar scroll sirasinda kapanir hale getirildi ve sag kolon hizasi toparlandi."},
-            {"issue_number": "25", "issue_title": "Premium GUI refresh", "summary": "Arayuz daha elit bir control suite hissi verecek sekilde yeniden tasarlandi; vitrin alani, durum kartlari, daha guclu tipografi ve premium panel hiyerarsisi eklendi."},
-            {"issue_number": "21", "issue_title": "Remove main tab and use a single page", "summary": "Main tab kaldirildi; ana body scrollable yapildi, ekran 50/50 iki paneye bolundu, Activity Log ve Neler degisti sag panele ayni sutunda tasindi, Neler degisti kutusu Activity Log stiliyle ust baslikli hale getirildi ve scroll eklendi, login alanlari ve butonlar kompakt hale getirildi, Mekanikler kutusunun dis cizgisi kaldirildi, Dungeon location Expedition altina alindi ve bolumler cizgilerle ayrildi."},
         ]
         self._registered_dropdowns = []
 
