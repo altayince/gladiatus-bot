@@ -10,6 +10,7 @@ GLA is a Python + Selenium automation tool for Gladiatus. It logs in, manages th
 - Check dungeon readiness, open a selected dungeon location from the submenu, choose a dungeon difficulty, and click a random dungeon attack target
 - Read expedition, dungeon, and Circus Turma battle reports, log win/loss state in color, and write extracted combat stats, rewards, and score summaries into the activity feed
 - Check Circus Turma readiness and attack the lowest-level target
+- Check Arena readiness and attack the lowest-level target from the `own2` table
 - Refill HP when the current HP drops below a threshold
 - Show the current refill potion count from the first inventory bag on the main screen
 - Run from the GUI or from the command line
