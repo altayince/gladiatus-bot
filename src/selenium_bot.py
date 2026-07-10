@@ -6,11 +6,13 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException
-from webdriver_manager.chrome import ChromeDriverManager
+import shutil
+import os
 import time
 import logging
 import random
 import re
+from webdriver_manager.chrome import ChromeDriverManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,9 +43,34 @@ class GladiatusBot:
             options.add_argument("--headless=new")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        service = Service(ChromeDriverManager().install())
-        self.driver = webdriver.Chrome(service=service, options=options)
+        self.driver = self._create_driver(options)
         self.wait = WebDriverWait(self.driver, timeout)
+
+    def _create_driver(self, options):
+        """Prefer local or Selenium-managed Chrome drivers before webdriver-manager."""
+        env_driver_path = os.environ.get("CHROMEDRIVER_PATH", "").strip()
+        if env_driver_path:
+            logging.info("Using CHROMEDRIVER_PATH at %s", env_driver_path)
+            return webdriver.Chrome(service=Service(env_driver_path), options=options)
+
+        driver_path = shutil.which("chromedriver")
+        if driver_path:
+            logging.info("Using local chromedriver at %s", driver_path)
+            return webdriver.Chrome(service=Service(driver_path), options=options)
+
+        # Try Selenium Manager before webdriver-manager to avoid a blocking version lookup.
+        try:
+            logging.info("Trying Selenium Manager for ChromeDriver")
+            return webdriver.Chrome(options=options)
+        except Exception as selenium_manager_error:
+            logging.warning("Selenium Manager ChromeDriver startup failed: %s", selenium_manager_error)
+
+        try:
+            logging.info("Falling back to webdriver-manager ChromeDriver download")
+            service = Service(ChromeDriverManager().install())
+            return webdriver.Chrome(service=service, options=options)
+        except Exception as exc:
+            raise RuntimeError(f"Could not start Chrome driver: {exc}") from exc
 
     def _click_element(self, by, value, timeout=10):
         for attempt in range(3):
@@ -1163,10 +1190,10 @@ class GladiatusBot:
                 logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
             return False
 
-    def attempt_dungeon_if_ready(self, dungeon_location="Voodoo Temple", dungeon_difficulty="Normal", logger_callback=None):
+    def attempt_dungeon_if_ready(self, dungeon_location="Voodoo Temple", dungeon_difficulty="Normal", logger_callback=None, leave_dungeon_on_defeat=False):
         """If dungeon cooldown indicates ready, navigate and click a random attack.
         Returns dict with result."""
-        info = {"clicked": False, "message": ""}
+        info = {"clicked": False, "message": "", "battle_report": None, "dungeon_cancelled": False}
         try:
             if not self.ensure_game_tab():
                 info["message"] = "Could not find game tab for dungeon"
@@ -1184,13 +1211,17 @@ class GladiatusBot:
             if logger_callback:
                 logger_callback("Dungeon ready — opening and clicking a random minimap attack...")
 
-            clicked = self.open_dungeon_and_random_attack(
+            result = self.open_dungeon_and_random_attack(
                 dungeon_location=dungeon_location,
                 dungeon_difficulty=dungeon_difficulty,
                 logger_callback=logger_callback,
+                leave_dungeon_on_defeat=leave_dungeon_on_defeat,
             )
-            info["clicked"] = bool(clicked)
-            info["message"] = "Clicked" if clicked else "No clickable attack found"
+            if isinstance(result, dict):
+                info.update(result)
+            else:
+                info["clicked"] = bool(result)
+                info["message"] = "Clicked" if result else "No clickable attack found"
             if logger_callback:
                 logger_callback(info["message"])
             return info
@@ -2374,6 +2405,59 @@ class GladiatusBot:
                 logger_callback(f"Error selecting dungeon difficulty: {e}")
             return False
 
+    def _cancel_dungeon(self, logger_callback=None):
+        """Click the Cancel dungeon button if it is present."""
+        try:
+            self.close_overlays()
+            candidates = [
+                (By.CSS_SELECTOR, "form[action*='cancelDungeon'] input[type='submit'][value='Cancel dungeon']"),
+                (By.CSS_SELECTOR, "input[type='submit'][value='Cancel dungeon']"),
+                (By.XPATH, "//form[contains(@action,'cancelDungeon')]//input[@type='submit' and @value='Cancel dungeon']"),
+                (By.XPATH, "//input[@type='submit' and @value='Cancel dungeon']"),
+            ]
+            for by, value in candidates:
+                try:
+                    elements = self.driver.find_elements(by, value)
+                    for el in elements:
+                        if el.is_displayed() and el.is_enabled():
+                            if self._safe_click(el):
+                                if logger_callback:
+                                    logger_callback("Clicked Cancel dungeon")
+                                self._wait_for_ui_settle(timeout=5)
+                                return True
+                except Exception:
+                    continue
+            if logger_callback:
+                logger_callback("Cancel dungeon button not found")
+            return False
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error cancelling dungeon: {e}")
+            return False
+
+    def _reopen_dungeon_before_cancel(self, dungeon_location, logger_callback=None):
+        """Return to the dungeon page flow so Cancel dungeon is available."""
+        try:
+            if logger_callback:
+                logger_callback("Re-opening dungeon location before cancel...")
+            if not self.ensure_game_tab():
+                if logger_callback:
+                    logger_callback("Could not find game tab while preparing dungeon cancel")
+                return False
+            if not self.open_dungeon_location(dungeon_location, logger_callback=logger_callback):
+                if logger_callback:
+                    logger_callback("Could not re-open dungeon location before cancel")
+                return False
+            if not self.open_dungeon_tab(logger_callback=logger_callback):
+                if logger_callback:
+                    logger_callback("Could not re-open dungeon tab before cancel")
+                return False
+            return True
+        except Exception as e:
+            if logger_callback:
+                logger_callback(f"Error re-opening dungeon before cancel: {e}")
+            return False
+
     def click_expedition_target(self, expedition_target=1, logger_callback=None):
         """Click the selected expedition target by 1-based expedition box index."""
         try:
@@ -2439,9 +2523,9 @@ class GladiatusBot:
         except Exception:
             return False
 
-    def open_dungeon_and_random_attack(self, dungeon_location="1", dungeon_difficulty="Normal", logger_callback=None, max_retries=3):
-        """Open the dungeon location and click a random minimap attack.
-        Returns True if an attack element was clicked."""
+    def open_dungeon_and_random_attack(self, dungeon_location="1", dungeon_difficulty="Normal", logger_callback=None, max_retries=3, leave_dungeon_on_defeat=False):
+        """Open the dungeon location and click a random minimap attack."""
+        info = {"clicked": False, "battle_report": None, "dungeon_cancelled": False, "message": ""}
         try:
             if logger_callback:
                 logger_callback("Ensuring game tab is active for dungeon...")
@@ -2449,13 +2533,16 @@ class GladiatusBot:
             if not self.ensure_game_tab():
                 if logger_callback:
                     logger_callback("Could not find game tab for dungeon")
-                return False
+                info["message"] = "Could not find game tab for dungeon"
+                return info
 
             if dungeon_location is not None:
                 if not self.open_dungeon_location(dungeon_location, logger_callback=logger_callback):
-                    return False
+                    info["message"] = f"Could not open dungeon location: {dungeon_location}"
+                    return info
                 if not self.open_dungeon_tab(logger_callback=logger_callback):
-                    return False
+                    info["message"] = "Could not open dungeon tab"
+                    return info
             else:
                 try:
                     link = None
@@ -2479,12 +2566,14 @@ class GladiatusBot:
                     if not link:
                         if logger_callback:
                             logger_callback("Dungeon link not found")
-                        return False
+                        info["message"] = "Dungeon link not found"
+                        return info
 
                     if not self._safe_click(link):
                         if logger_callback:
                             logger_callback("Failed to click dungeon link")
-                        return False
+                        info["message"] = "Failed to click dungeon link"
+                        return info
 
                     if not self._wait_for_page_context(
                         expected_elements=[
@@ -2497,11 +2586,13 @@ class GladiatusBot:
                     ):
                         if logger_callback:
                             logger_callback("Dungeon page did not open in time")
-                        return False
+                        info["message"] = "Dungeon page did not open in time"
+                        return info
                 except Exception:
                     if logger_callback:
                         logger_callback("Error navigating to dungeon page")
-                    return False
+                    info["message"] = "Error navigating to dungeon page"
+                    return info
 
             self._click_dungeon_difficulty(dungeon_difficulty, logger_callback=logger_callback)
 
@@ -2548,7 +2639,8 @@ class GladiatusBot:
             if not visible:
                 if logger_callback:
                     logger_callback("No dungeon attack elements became available")
-                return False
+                info["message"] = "No dungeon attack elements became available"
+                return info
 
             tries = 0
             while tries < max_retries and visible:
@@ -2561,9 +2653,20 @@ class GladiatusBot:
                         if logger_callback:
                             logger_callback("Clicked dungeon minimap attack element")
                         self._wait_for_post_attack_navigation(previous_url, logger_callback=logger_callback, timeout=15)
-                        self._capture_and_log_battle_report("dungeon", logger_callback=logger_callback, timeout=10)
+                        info["battle_report"] = self._capture_and_log_battle_report("dungeon", logger_callback=logger_callback, timeout=10)
+                        if leave_dungeon_on_defeat and info["battle_report"] and info["battle_report"].get("won") is False:
+                            if logger_callback:
+                                logger_callback("Dungeon lost - reopening dungeon and cancelling it...")
+                            if self._reopen_dungeon_before_cancel(dungeon_location, logger_callback=logger_callback):
+                                info["dungeon_cancelled"] = self._cancel_dungeon(logger_callback=logger_callback)
+                            else:
+                                info["dungeon_cancelled"] = False
+                            if not info["dungeon_cancelled"] and logger_callback:
+                                logger_callback("Dungeon cancel action not confirmed")
                         self.navigate_to_overview(logger_callback=logger_callback)
-                        return True
+                        info["clicked"] = True
+                        info["message"] = "Clicked"
+                        return info
                     except StaleElementReferenceException:
                         tries += 1
                         visible = [c for c in self._wait_for_dungeon_attack_elements(timeout=5) if c.is_displayed()]
@@ -2580,11 +2683,13 @@ class GladiatusBot:
 
             if logger_callback:
                 logger_callback("No clickable dungeon attack element found after retries")
-            return False
+            info["message"] = "No clickable dungeon attack element found after retries"
+            return info
         except Exception as e:
             if logger_callback:
                 logger_callback(f"Error in open_dungeon_and_random_attack: {e}")
-            return False
+            info["message"] = f"Error in open_dungeon_and_random_attack: {e}"
+            return info
 
     def is_hp_above_threshold(self, min_hp_percent):
         """Return True if current HP percent is strictly above min_hp_percent."""
@@ -2822,3 +2927,4 @@ class GladiatusBot:
             self.driver.quit()
         except Exception:
             pass
+
