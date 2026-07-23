@@ -34,6 +34,12 @@ class GladiatusBot:
         "caravan": 5,
         "mesoai-oasis": 6,
         "cliff jumper": 7,
+        "cave temple": 0,
+        "the green forest": 1,
+        "cursed village": 2,
+        "death hill": 3,
+        "vandal village": 4,
+        "mine": 5,
     }
     DUNGEON_LOCATIONS = EXPEDITION_LOCATIONS
 
