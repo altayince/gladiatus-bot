@@ -40,6 +40,7 @@ class GladiatusBot:
         "death hill": 3,
         "vandal village": 4,
         "mine": 5,
+        "teuton camp": 6,
     }
     DUNGEON_LOCATIONS = EXPEDITION_LOCATIONS
 

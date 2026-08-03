@@ -504,6 +504,7 @@ class GladiatusGUI:
         ("Death Hill", "3"),
         ("Vandal Village", "4"),
         ("Mine", "5"),
+        ("Teuton Camp", "6"),
     ]
     DUNGEON_LOCATIONS = [label for label, _ in EXPEDITION_LOCATIONS]
     DUNGEON_DIFFICULTIES = ["Normal", "Advanced"]
@@ -566,6 +567,7 @@ class GladiatusGUI:
         self.dungeon_location_var = tk.StringVar(value="Grimwood")
         self.dungeon_difficulty_var = tk.StringVar(value="Normal")
         self.change_notes = [
+            {"issue_number": "59", "issue_title": "Add Teuton Camp routing support", "summary": "Teuton Camp lokasyonu expedition ve dungeon routing listelerine en alta eklendi; Selenium tarafinda loc=6 eslesmesi tanimlandi ve yeni submenu secimi GUI ile senkronize edildi."},
             {"issue_number": "57", "issue_title": "Add submenu routing locations", "summary": "Yeni country map submenu HTML'indeki Cave Temple, The Green Forest, Cursed Village, Death Hill, Vandal Village ve Mine expedition/dungeon routing secimlerine eklendi; Hermit disarida birakildi ve loc=0-5 eslesmeleri Selenium ile senkronize edildi."},
             {"issue_number": "55", "issue_title": "Fix arena cooldown link detection", "summary": "Arena cooldown bari artik kendi container'inda okunuyor; mod=arena cooldown linki ve gorunmeyen overlay anchor Selenium tarafinda tiklanabiliyor, arena acildiginda own2 listesindeki en dusuk seviyeli rakip yeniden secilip saldiriliyor."},
             {"issue_number": "53", "issue_title": "Add arena mechanic support", "summary": "Arena modu Circus Turma ile ayni akisa baglandi; ilk navigasyon linki degistirildi, own2 tablosundan en dusuk seviyeli rakip seciliyor ve mekanik GUI checkbox/settings ile yonetiliyor."},
@@ -575,7 +577,6 @@ class GladiatusGUI:
             {"issue_number": "45", "issue_title": "Add battle report logging for expedition, dungeon, and Circus Turma", "summary": "Expedition, dungeon ve Circus Turma saldirilarindan sonra battle report okunuyor; kazanma/kaybetme loglari renkli akiyor ve temel savas istatistikleri, oduller ve varsa puan ozeti Activity Feed'e yaziliyor."},
             {"issue_number": "41", "issue_title": "Polish custom window restore animations on Windows", "summary": "Windows'ta custom header korunarak taskbar minimize/restore animasyonlari daha yonlu ve yumusak hale getirildi; restore sirasi ustte flash azaltildi."},
             {"issue_number": "39", "issue_title": "Fix custom header window behavior on Windows", "summary": "Windows'ta custom header korunurken acilis flash'i, minimize, maximize ve Alt+Tab/taskbar gorunurlugu duzeltildi."},
-            {"issue_number": "34", "issue_title": "Expand expedition and dungeon locations", "summary": "Expedition ve dungeon secimleri eski lokasyonlar korunarak yeni submenu lokasyonlariyla genisletildi; dropdown listesi kaydirilabilir hale getirildi, Hermit ve Rise of the Forgotten dropdown'lara dahil edilmedi."},
         ]
         self._registered_dropdowns = []
 
